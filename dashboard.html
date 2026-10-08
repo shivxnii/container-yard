@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Container Yard Monitor</title>
+<style>
+:root{--bg:#0f1419;--panel:#171e26;--line:#26303b;--text:#e6edf3;--mute:#8b98a5;--accent:#3fb6ff;--ok:#3ddc97;--warn:#f5a524}
+@media (prefers-color-scheme:light){:root{--bg:#f3f5f7;--panel:#fff;--line:#d9e0e6;--text:#1b2733;--mute:#66727e;--accent:#0b78c4;--ok:#12975f;--warn:#b86e00}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+h1{font-size:16px;margin:0;font-weight:600}
+.live{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.dot.on{background:var(--ok);animation:pulse 1.5s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.stats{display:flex;gap:20px;margin-left:auto}
+.stat b{display:block;font-size:18px}.stat span{color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+main{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;padding:16px 20px}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.panel h2{font-size:12px;margin:0 0 10px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+canvas{width:100%;height:auto;display:block;border-radius:6px;background:var(--bg);cursor:pointer}
+.video{aspect-ratio:16/9;background:#000;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#8b98a5;overflow:hidden}
+.video img{width:100%;height:100%;object-fit:contain}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.search{display:flex;gap:8px;margin-bottom:10px}
+input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:6px;font:inherit;text-transform:uppercase}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer}
+button.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}
+.detail{font-size:13px;min-height:44px;color:var(--mute)}
+.detail b{color:var(--text)}
+.tablewrap{max-height:300px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--mute);font-weight:500;padding:4px 6px;position:sticky;top:0;background:var(--panel)}
+td{padding:5px 6px;border-top:1px solid var(--line);white-space:nowrap}
+tr.sel td{background:rgba(63,182,255,.12)}
+tr{cursor:pointer}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;min-height:4px}.chip{border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12px;color:var(--mute);transition:all .25s}.chip.on{color:var(--text);border-color:var(--accent);background:rgba(63,182,255,.12)}
+.legend{display:flex;gap:14px;margin-top:8px;color:var(--mute);font-size:12px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Container Yard Monitor</h1>
+  <div class="live"><span class="dot" id="dot"></span><span id="status">connecting…</span></div>
+  <div class="stats">
+    <div class="stat"><b id="sTotal">0</b><span>Containers</span></div>
+    <div class="stat"><b id="sLast">–</b><span>Last update</span></div>
+    <div class="stat"><b id="sAmb">0</b><span>Heading unsure</span></div>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2 id="mapTitle">Yard map (metres)</h2>
+    <canvas id="map" width="720" height="720"></canvas>
+    <div class="legend">
+      <span><i style="background:#3fb6ff"></i>Tier 1</span>
+      <span><i style="background:#3ddc97"></i>Tier 2</span>
+      <span><i style="background:#f5a524"></i>Tier 3+</span>
+      <span>Arrow = heading (toward door end when known) · dashed = heading uncertain</span>
+      <span>Live: bright outline = in the camera picture now, faded = out of view, dashed frame = camera view</span>
+    </div>
+  </section>
+
+  <div class="col">
+    <section class="panel" id="livePanel" style="display:none">
+      <h2>Live simulation</h2>
+      <div class="video"><img id="liveImg" style="display:none" alt="annotated video"><span id="liveEmpty">Play a video or start a camera</span></div>
+      <div class="bar"><i id="lvBar"></i></div>
+      <div class="chips" id="lvTags"></div>
+      <div class="detail" id="lvMsg">The map follows the video: boxes found in the picture appear on the map, boxes taken away disappear.</div>
+      <div class="search"><input type="file" id="lvFile" accept="video/*" style="text-transform:none"><button id="lvPlay">Play video</button></div>
+      <div class="search"><input id="lvCam" value="0" placeholder="0, 1 or rtsp://…" style="text-transform:none"><button id="lvStart">Start camera</button><button class="ghost" id="lvStop">Stop</button><button class="ghost" id="lvClear">Clear map</button></div>
+    </section>
+
+    <section class="panel" id="upPanel" style="display:none">
+      <h2>Upload video</h2>
+      <div class="search"><input type="file" id="upFile" accept="video/*" style="text-transform:none"><button id="upBtn">Process</button></div>
+      <div class="bar"><i id="upBar"></i></div>
+      <div class="detail" id="upMsg">Upload a room/whiteboard video; boxes are mapped to zone, segment and tier.</div>
+      <img id="upPrev" style="display:none;width:100%;border-radius:6px;margin-top:8px">
+      <div class="tablewrap"><table id="upTbl" style="display:none"><thead><tr><th>Zone / segment</th><th>Boxes</th><th>Max tier</th><th>Top z (m)</th></tr></thead><tbody id="upRows"></tbody></table></div>
+    </section>
+
+    <section class="panel" id="camPanel">
+      <h2>Live camera</h2>
+      <div class="video" id="videoBox">No live video source</div>
+    </section>
+
+    <section class="panel">
+      <h2>Find a container</h2>
+      <div class="search">
+        <input id="q" placeholder="e.g. CSQU3054383" maxlength="11">
+        <button id="go">Find</button>
+        <button class="ghost" id="clear">Clear</button>
+      </div>
+      <div class="detail" id="detail">Click a container on the map or in the table.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Recent sightings</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Time</th><th>Container</th><th>Checkpoint</th><th>x, y</th><th>Tier</th><th>z (m)</th><th>Hdg</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('map'), ctx = cv.getContext('2d');
+let containers = [], recent = [], selected = null, path = [], yard = 100, hit = [];
+let layout = null, yardW = 100, yardH = 100, scale = 1, boxW = 12, boxH = 2.6;
+
+const tierColor = t => t <= 1 ? '#3fb6ff' : t === 2 ? '#3ddc97' : '#f5a524';
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtTime = iso => iso ? new Date(iso + (iso.endsWith('Z') || iso.includes('+') ? '' : 'Z')).toLocaleTimeString() : '–';
+
+async function j(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// ---------- map ----------
+const P = 36;                                   // padding in px
+const sx = x => P + x * scale;
+const sy = y => cv.height - P - y * scale;
+function fit() {                                  // equal scale on both axes
+  scale = (cv.width - 2 * P) / yardW;
+  cv.height = Math.round(2 * P + yardH * scale);
+}
+fit();
+
+function drawBox(c, isSel) {
+  const w = boxW * scale, h = boxH * scale;
+  const th = (c.heading_deg - 90) * Math.PI / 180;      // 0° = north (up)
+  for (let k = c.z_tier - 1; k >= 1; k--) {                  // lower tiers peek out below (rough z)
+    ctx.save(); ctx.translate(sx(c.x) + 3 * k, sy(c.y) + 3 * k); ctx.rotate(th);
+    ctx.fillStyle = tierColor(k) + '88'; ctx.strokeStyle = 'rgba(0,0,0,.35)';
+    ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h); ctx.restore();
+  }
+  ctx.save();
+  ctx.translate(sx(c.x), sy(c.y)); ctx.rotate(th);
+  ctx.globalAlpha = (c.live && !c.in_view ? .45 : 1) * (c.alpha === undefined ? 1 : c.alpha);
+  ctx.fillStyle = tierColor(c.z_tier) + (isSel ? 'ff' : 'cc');
+  ctx.strokeStyle = isSel ? css('--text') : c.in_view ? css('--accent') : 'rgba(0,0,0,.4)';
+  ctx.lineWidth = isSel ? 2 : c.in_view ? 2.5 : 1;
+  ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+  ctx.setLineDash(c.heading_ambiguous ? [3, 3] : []);
+  ctx.beginPath(); ctx.moveTo(-w / 3, 0); ctx.lineTo(w / 2 + 6, 0);
+  ctx.moveTo(w / 2 + 6, 0); ctx.lineTo(w / 2 - 2, -4); ctx.moveTo(w / 2 + 6, 0); ctx.lineTo(w / 2 - 2, 4);
+  ctx.stroke(); ctx.restore();
+}
+
+function drawLayout() {
+  layout.zones.forEach((z, zi) => {
+    ctx.fillStyle = zi ? 'rgba(245,165,36,.07)' : 'rgba(63,182,255,.07)';
+    ctx.fillRect(sx(z.x), sy(z.y + z.h), z.w * scale, z.h * scale);
+    ctx.fillStyle = css('--mute'); ctx.font = 'bold 13px system-ui';
+    ctx.fillText(z.name.toUpperCase(), sx(z.x) + 6, sy(z.y + z.h) + 16);
+    z.segments.forEach(s => {
+      ctx.strokeStyle = css('--line'); ctx.lineWidth = 1.5; ctx.setLineDash([]);
+      ctx.strokeRect(sx(s.x), sy(s.y + s.h), s.w * scale, s.h * scale);
+      ctx.fillStyle = css('--mute'); ctx.font = '10px system-ui';
+      ctx.fillText(s.name, sx(s.x) + 4, sy(s.y) - 5);
+      s.slots.forEach(sl => {
+        ctx.setLineDash([3, 3]); ctx.strokeStyle = css('--line');
+        ctx.strokeRect(sx(sl.x) - boxW * scale / 2, sy(sl.y) - boxH * scale / 2, boxW * scale, boxH * scale);
+        ctx.setLineDash([]);
+      });
+    });
+  });
+  ctx.font = '11px system-ui';
+}
+
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = css('--line'); ctx.fillStyle = css('--mute'); ctx.font = '11px system-ui';
+  ctx.lineWidth = 1; ctx.setLineDash([]);
+  const step = layout ? 1 : yard > 150 ? 50 : 20;
+  for (let v = 0; v <= yardW; v += step) {
+    ctx.beginPath(); ctx.moveTo(sx(v), sy(0)); ctx.lineTo(sx(v), sy(yardH)); ctx.stroke();
+    ctx.fillText(v, sx(v) - 6, cv.height - P + 14);
+  }
+  for (let v = 0; v <= yardH; v += step) {
+    ctx.beginPath(); ctx.moveTo(sx(0), sy(v)); ctx.lineTo(sx(yardW), sy(v)); ctx.stroke();
+    ctx.fillText(v, P - 26, sy(v) + 4);
+  }
+  if (layout) drawLayout();
+  if (viewShown) {                                              // what the camera sees right now, on the map
+    ctx.save(); ctx.beginPath(); ctx.rect(sx(0), sy(yardH), yardW * scale, yardH * scale); ctx.clip();
+    ctx.setLineDash([8, 5]); ctx.strokeStyle = css('--accent'); ctx.fillStyle = 'rgba(63,182,255,.07)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); viewShown.forEach((p, i) => i ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1])));
+    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
+  }
+  ctx.fillStyle = css('--mute'); ctx.fillText('N ↑', cv.width - 40, 20);
+  if (path.length > 1) {                                  // route of selected container
+    ctx.strokeStyle = css('--accent'); ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(sx(p.x), sy(p.y)) : ctx.moveTo(sx(p.x), sy(p.y)));
+    ctx.stroke(); ctx.setLineDash([]);
+    path.forEach(p => { ctx.fillStyle = css('--accent'); ctx.beginPath(); ctx.arc(sx(p.x), sy(p.y), 3, 0, 7); ctx.fill(); });
+  }
+  hit = [];
+  const cs = shown();
+  cs.forEach(c => {
+    drawBox(c, c.container_id === selected);
+    hit.push({ id: c.container_id, x: sx(c.x), y: sy(c.y) });
+    const same = cs.filter(o => Math.abs(o.gx - c.gx) < 1e-6 && Math.abs(o.gy - c.gy) < 1e-6);        // one label per stack, on its top box
+    if (c.z_tier === Math.max(...same.map(o => o.z_tier)) && (c.container_id === selected || cs.length <= 16 || same.length > 1)) {
+      ctx.globalAlpha = c.alpha === undefined ? 1 : c.alpha; ctx.fillStyle = css('--text'); ctx.font = c.live ? 'bold 11px system-ui' : '10px system-ui';
+      ctx.fillText(c.container_id + (same.length > 1 ? ` ×${same.length}` : '') + (c.z_tier > 1 ? ' · z ' + c.z_m + ' m' : ''), sx(c.x) - 28, sy(c.y) - (layout ? boxH * scale / 2 + 3 : 12));
+      ctx.globalAlpha = 1;
+    }
+  });
+}
+
+cv.addEventListener('click', e => {
+  const r = cv.getBoundingClientRect(), k = cv.width / r.width;
+  const mx = (e.clientX - r.left) * k, my = (e.clientY - r.top) * k;
+  let best = null, d = 40;
+  hit.forEach(h => { const dd = Math.hypot(h.x - mx, h.y - my); if (dd < d) { d = dd; best = h.id; } });
+  if (best) select(best);
+});
+
+// ---------- selection / detail ----------
+async function select(id) {
+  selected = id; $('q').value = id;
+  try {
+    const hist = await j(`/containers/${id}/history`);
+    path = hist; const l = hist[hist.length - 1];
+    $('detail').innerHTML = l
+      ? `<b>${id}</b> is at <b>${l.checkpoint}</b> · x ${l.x.toFixed(1)} m, y ${l.y.toFixed(1)} m · tier ${l.z_tier} (top z ≈ ${l.z_m} m) · heading ${l.heading_deg.toFixed(0)}°${l.heading_ambiguous ? ' (unsure which end)' : ''}<br>${hist.length} sighting(s) · last seen ${fmtTime(l.seen_at)}`
+      : `No sightings for ${id}.`;
+  } catch { $('detail').textContent = 'Lookup failed.'; }
+  render();
+}
+$('go').onclick = async () => {
+  const id = $('q').value.trim().toUpperCase();
+  if (!id) return;
+  try { await j(`/containers/${id}/latest`); select(id); }
+  catch (e) { $('detail').textContent = e.message == 422 ? `${id} is not a valid container number.` : `${id} has not been seen yet.`; }
+};
+$('q').addEventListener('keydown', e => e.key === 'Enter' && $('go').click());
+$('clear').onclick = () => { selected = null; path = []; $('q').value = ''; $('detail').textContent = 'Click a container on the map or in the table.'; render(); };
+
+// ---------- table + stats ----------
+let lastRows = '';
+function render() {
+  const html = recent.map(r => `<tr data-id="${r.container_id}" class="${r.container_id === selected ? 'sel' : ''}">
+    <td>${fmtTime(r.seen_at)}</td><td>${r.container_id}</td><td>${r.checkpoint}</td>
+    <td>${r.x.toFixed(0)}, ${r.y.toFixed(0)}</td><td>${r.z_tier}</td><td>${r.z_m}</td><td>${r.heading_deg.toFixed(0)}°</td></tr>`).join('');
+  if (html !== lastRows) {
+    lastRows = html; $('rows').innerHTML = html;
+    document.querySelectorAll('#rows tr').forEach(tr => tr.onclick = () => select(tr.dataset.id));
+  }
+  $('sTotal').textContent = containers.length;
+  $('sAmb').textContent = containers.filter(c => c.heading_ambiguous).length;
+  $('sLast').textContent = recent[0] ? fmtTime(recent[0].seen_at) : '–';
+  draw();
+}
+
+// ---------- smooth movement ----------
+const anim = new Map(); let liveView = null, viewShown = null;
+function setTargets(list) {
+  const seen = new Set();
+  list.forEach(c => {
+    seen.add(c.container_id);
+    let a = anim.get(c.container_id);
+    if (!a) { a = { x: c.x, y: c.y, alpha: 0, gone: false }; anim.set(c.container_id, a); }
+    a.c = c; a.tx = c.x; a.ty = c.y; a.gone = false;
+  });
+  anim.forEach((a, id) => { if (!seen.has(id)) a.gone = true; });
+}
+function shown() { return [...anim.values()].map(a => ({ ...a.c, x: a.x, y: a.y, gx: a.tx, gy: a.ty, alpha: a.alpha })); }
+function stepAnim() {
+  let moving = false;
+  anim.forEach((a, id) => {
+    if (Math.abs(a.tx - a.x) > .004 || Math.abs(a.ty - a.y) > .004) { a.x += (a.tx - a.x) * .22; a.y += (a.ty - a.y) * .22; moving = true; }
+    else { a.x = a.tx; a.y = a.ty; }
+    const ta = a.gone ? 0 : 1;
+    if (Math.abs(ta - a.alpha) > .02) { a.alpha += (ta - a.alpha) * .2; moving = true; }
+    else { a.alpha = ta; if (a.gone) anim.delete(id); }
+  });
+  if (liveView) {
+    if (!viewShown || viewShown.length !== liveView.length) { viewShown = liveView.map(p => p.slice()); moving = true; }
+    else liveView.forEach((p, i) => { const q = viewShown[i];
+      if (Math.abs(p[0] - q[0]) > .004 || Math.abs(p[1] - q[1]) > .004) { q[0] += (p[0] - q[0]) * .25; q[1] += (p[1] - q[1]) * .25; moving = true; } });
+  } else if (viewShown) { viewShown = null; moving = true; }
+  if (moving) draw();
+  requestAnimationFrame(stepAnim);
+}
+
+// ---------- polling: the live state is fetched often, the database lists rarely ----------
+let liveActive = false, busyDb = false, busyLive = false, lastSession = null, liveOn = false;
+function tick() { tickDb(); tickLive(); }
+async function tickDb() {
+  if (busyDb) return; busyDb = true;
+  try {
+    recent = await j('/sightings/recent?limit=30');
+    if (!liveActive) {
+      containers = await j('/containers'); setTargets(containers);
+      if (!layout) { yard = Math.max(100, Math.ceil(Math.max(0, ...containers.map(c => Math.max(c.x, c.y))) / 50) * 50); yardW = yardH = yard; fit(); }
+    }
+    if (selected) path = await j(`/containers/${selected}/history`);
+    $('dot').className = 'dot on'; $('status').textContent = liveOn ? 'live · following the video' : 'live · updating every 2 s';
+    render();
+  } catch { $('dot').className = 'dot'; $('status').textContent = 'disconnected — retrying'; }
+  busyDb = false;
+}
+async function tickLive() {
+  if (!layout || busyLive) return; busyLive = true;
+  try {
+    const ls = await j('/live/state');
+    showLive(ls);
+    if (ls.status !== 'idle') {
+      liveActive = true; containers = ls.containers; liveView = ls.view || null; setTargets(containers);
+      $('lvTags').innerHTML = containers.map(c => `<span class="chip ${c.in_view ? 'on' : ''}">${c.container_id}</span>`).join('');
+      $('sTotal').textContent = containers.length; $('sAmb').textContent = containers.filter(c => c.heading_ambiguous).length;
+    } else if (liveActive) { liveActive = false; liveView = null; $('lvTags').innerHTML = ''; tickDb(); }
+  } catch { /* the next poll retries */ }
+  busyLive = false;
+}
+function setVideo() {
+  const im = $('liveImg');
+  im.onload = () => { im.style.display = ''; $('liveEmpty').style.display = 'none'; };
+  im.src = '/live/video?t=' + Date.now();
+}
+function showLive(ls) {
+  liveOn = ls.status === 'running';
+  if (!layout) return;
+  if (ls.status === 'idle') { lastSession = null; return; }
+  if (ls.session !== lastSession) { lastSession = ls.session; setVideo(); }       // a new video / camera: reconnect the picture once
+  $('lvBar').style.width = ((ls.progress || 0) * 100) + '%';
+  $('lvMsg').textContent = ({ error: 'Error: ' }[ls.status] || '') + (ls.message || ls.status);
+}
+async function liveCall(url, opt) {
+  $('lvMsg').textContent = 'Starting…';
+  try {
+    const r = await fetch(url, opt);
+    if (!r.ok) { $('lvMsg').textContent = (await r.json().catch(() => ({}))).detail || 'Request failed'; return; }
+    tick();
+  } catch { $('lvMsg').textContent = 'Request failed.'; }
+}
+$('lvPlay').onclick = () => {
+  const f = $('lvFile').files[0]; if (!f) { $('lvMsg').textContent = 'Choose a video file first.'; return; }
+  const x = new XMLHttpRequest();
+  x.open('POST', '/live/upload?name=' + encodeURIComponent(f.name));
+  x.setRequestHeader('Content-Type', 'application/octet-stream');
+  x.upload.onprogress = e => { if (e.lengthComputable) { $('lvBar').style.width = (e.loaded / e.total * 100) + '%'; $('lvMsg').textContent = `Uploading… ${Math.round(e.loaded / e.total * 100)} %`; } };
+  x.onload = () => {
+    if (x.status >= 200 && x.status < 300) { $('lvMsg').textContent = 'Starting…'; tick(); }
+    else { try { $('lvMsg').textContent = JSON.parse(x.responseText).detail || 'Upload failed.'; } catch { $('lvMsg').textContent = 'Upload failed.'; } }
+  };
+  x.onerror = () => { $('lvMsg').textContent = 'Upload failed.'; };
+  $('lvMsg').textContent = 'Uploading… 0 %'; x.send(f);
+};
+$('lvStart').onclick = () => { const v = $('lvCam').value.trim(); if (v) liveCall('/live/start?source=' + encodeURIComponent(v), { method: 'POST' }); };
+$('lvStop').onclick = () => liveCall('/live/stop', { method: 'POST' });
+$('lvClear').onclick = async () => {
+  await fetch('/reset', { method: 'POST' }).catch(() => {});
+  lastSession = null; $('liveImg').removeAttribute('src'); $('liveImg').style.display = 'none'; $('liveEmpty').style.display = '';
+  selected = null; path = []; $('lvMsg').textContent = 'Map cleared.'; tick();
+};
+
+async function poll(id) {
+  const o = await j('/jobs/' + id);
+  $('upBar').style.width = (o.progress * 100) + '%'; $('upMsg').textContent = o.message;
+  if (o.status === 'running') return setTimeout(() => poll(id), 1000);
+  $('upBtn').disabled = false;
+  if (o.status === 'error') return;
+  $('upMsg').textContent = `Done: ${o.rows.length} box(es) placed` + (o.unassigned ? `, ${o.unassigned} outside the layout (ignored)` : '') + '.';
+  $('upRows').innerHTML = Object.entries(o.summary).map(([k, s]) =>
+    `<tr><td>${k}</td><td>${s.count}</td><td>${s.max_tier}</td><td>${(s.max_tier * 2.59).toFixed(1)}</td></tr>`).join('');
+  $('upTbl').style.display = '';
+  if (o.preview) { $('upPrev').src = `/jobs/${id}/preview`; $('upPrev').style.display = ''; }
+  tick();
+}
+$('upBtn').onclick = async () => {
+  const f = $('upFile').files[0]; if (!f) return;
+  $('upBtn').disabled = true; $('upMsg').textContent = 'Uploading…'; $('upBar').style.width = '0';
+  try {
+    const r = await fetch('/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' } });
+    poll((await r.json()).id);
+  } catch { $('upMsg').textContent = 'Upload failed.'; $('upBtn').disabled = false; }
+};
+
+(async () => {
+  try {
+    layout = await j('/layout'); $('upPanel').style.display = ''; $('livePanel').style.display = ''; $('camPanel').style.display = 'none';
+    yardW = layout.width_m; yardH = layout.height_m; [boxW, boxH] = layout.box_m;
+    $('mapTitle').textContent = layout.name + ' (metres)'; fit();
+  } catch { /* no layout: normal yard grid */ }
+  tick(); setInterval(tickDb, 2000); setInterval(tickLive, 600); requestAnimationFrame(stepAnim);
+})();
+
+// video: show the stream only if the server has a source
+const img = new Image();
+img.onload = () => { $('videoBox').innerHTML = ''; $('videoBox').appendChild(img); };
+img.src = '/video';
+</script>
+</body>
+</html>

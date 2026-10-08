@@ -1,0 +1,8 @@
+numpy
+sqlalchemy
+fastapi
+uvicorn
+psycopg2-binary   # only for PostgreSQL
+pytest
+opencv-python
+rapidocr-onnxruntime   # reads the handwritten tag codes (pure pip, no Tesseract)
