@@ -15,6 +15,7 @@ CONFIRM = 2          # reads before a tag appears on the map
 MISS_MAX = 6         # OCR passes a tag may be missing (while its place is in view and big enough) before it is removed
 SETTLED = 6         # reads after which a tag counts as settled (moving it raises an event)
 MOVE_CONFIRM = 3     # consistent reads at a new place before the tag counts as moved
+RAW_AGE = 4          # OCR passes a tag's last measured position is used for drawing on the video, then the (drift-corrected) model
 MIN_TEXT_PX = 28     # text narrower than this (in the OCR frame) is too small to expect a read
 CONTAINER_H_M = 2.59
 STACK_COLUMNS = os.getenv("STACK_COLUMNS") == "1"   # show each whiteboard column as one stack (z) instead of one box per slot
@@ -29,6 +30,7 @@ class Tag:
         self.conf, self.in_view, self.cand = 0.0, True, None
         self.votes = {tid: 1}
         self.si = self.ri = None            # last placement (hysteresis)
+        self.raw = None                     # last read as measured: (raw board pos, text w, text h, step) - used to draw the box exactly on the text
 
 
 class Board:
@@ -69,6 +71,7 @@ class Board:
         sc = sc0 * corr[2]
         got = set()
         for r, p, w, h in meas:
+            p0, w0, h0 = p, w, h                                  # as measured in this frame (for the video overlay)
             p, w, h = fix(p), w * corr[2], h * corr[2]
             t = self.tags.get(r["id"])
             if t is None and not r["known"]:                    # unknown text: attach to a tag already at that place
@@ -104,6 +107,7 @@ class Board:
                         t.w, t.h = w, h
                         if not young:
                             self.events.append(("moved", t.id))
+            t.raw = (np.array(p0, float), w0, h0, self.step)
             t.n += 1; t.last, t.miss, t.in_view = self.step, 0, True
             t.conf = max(t.conf * .8, r["conf"]) if t.n > 1 else r["conf"]
             got.add(t.id)
@@ -170,6 +174,27 @@ class Board:
             if self._close(t, p, w, h):
                 return t
         return None
+
+    def fix(self, p):
+        """raw registered board coords -> corrected board coords (the landmark correction)."""
+        c = self.corr
+        return c[1] + c[2] * (np.asarray(p, float) - c[0])
+
+    def unfix(self, q):
+        """corrected board coords -> raw registered coords (what a frame's transform H maps pixels to)."""
+        c = self.corr
+        return c[0] + (np.asarray(q, float) - c[1]) / c[2]
+
+    def layout_point(self, raw):
+        """A point in raw registered board coords -> metres on the layout map (clamped to the room), or None."""
+        if self.model is None:
+            return None
+        x0, sp, y0, pitch = self.model
+        b = self.fix(raw)
+        fx, fy = (float(b[0]) - x0) / sp, (float(b[1]) - y0) / pitch
+        x = float(self._interp(fx, self.cols_x)); y = float(self._interp(fy, self.rows_y[0]))
+        W, Hh = float(self.layout.get("width_m", 8)), float(self.layout.get("height_m", 6))
+        return [round(min(max(x, 0.0), W), 3), round(min(max(y, 0.0), Hh), 3)]
 
     def take_events(self):
         e, self.events = self.events, []
@@ -290,4 +315,15 @@ class Board:
         return vals[i] + (f - i) * (vals[i + 1] - vals[i])
 
     def overlay(self):
-        return [(t.id, t.pos.copy(), t.w, t.h, t.n >= CONFIRM, t.in_view) for t in self.tags.values()]
+        """Tags for drawing on the video, in the RAW registered coordinates (the ones a frame's transform H maps
+        pixels to). A tag read a moment ago is drawn where it was measured, so the box sits exactly on its text;
+        otherwise the stored (drift-corrected) position is converted back to raw coordinates."""
+        s = float(self.corr[2]) or 1.0
+        out = []
+        for t in self.tags.values():
+            if t.raw is not None and self.step - t.raw[3] <= RAW_AGE:
+                pos, w, h = t.raw[0], t.raw[1], t.raw[2]
+            else:
+                pos, w, h = self.unfix(t.pos), t.w / s, t.h / s
+            out.append((t.id, pos, w, h, t.n >= CONFIRM, t.in_view))
+        return out

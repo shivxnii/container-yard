@@ -5,408 +5,576 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Container Yard Monitor</title>
 <style>
-:root{--bg:#0f1419;--panel:#171e26;--line:#26303b;--text:#e6edf3;--mute:#8b98a5;--accent:#3fb6ff;--ok:#3ddc97;--warn:#f5a524}
-@media (prefers-color-scheme:light){:root{--bg:#f3f5f7;--panel:#fff;--line:#d9e0e6;--text:#1b2733;--mute:#66727e;--accent:#0b78c4;--ok:#12975f;--warn:#b86e00}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif}
-header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-h1{font-size:16px;margin:0;font-weight:600}
-.live{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:12px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
-.dot.on{background:var(--ok);animation:pulse 1.5s infinite}
-@keyframes pulse{50%{opacity:.35}}
-.stats{display:flex;gap:20px;margin-left:auto}
-.stat b{display:block;font-size:18px}.stat span{color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-main{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;padding:16px 20px}
-@media (max-width:900px){main{grid-template-columns:1fr}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
-.panel h2{font-size:12px;margin:0 0 10px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
-canvas{width:100%;height:auto;display:block;border-radius:6px;background:var(--bg);cursor:pointer}
-.video{aspect-ratio:16/9;background:#000;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#8b98a5;overflow:hidden}
-.video img{width:100%;height:100%;object-fit:contain}
-.col{display:flex;flex-direction:column;gap:16px;min-width:0}
-.search{display:flex;gap:8px;margin-bottom:10px}
-input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:6px;font:inherit;text-transform:uppercase}
-button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer}
-button.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}
-.detail{font-size:13px;min-height:44px;color:var(--mute)}
-.detail b{color:var(--text)}
-.tablewrap{max-height:300px;overflow:auto}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-th{text-align:left;color:var(--mute);font-weight:500;padding:4px 6px;position:sticky;top:0;background:var(--panel)}
-td{padding:5px 6px;border-top:1px solid var(--line);white-space:nowrap}
-tr.sel td{background:rgba(63,182,255,.12)}
-tr{cursor:pointer}
-.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;min-height:4px}.chip{border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12px;color:var(--mute);transition:all .25s}.chip.on{color:var(--text);border-color:var(--accent);background:rgba(63,182,255,.12)}
-.legend{display:flex;gap:14px;margin-top:8px;color:var(--mute);font-size:12px;flex-wrap:wrap}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+:root{--g:#0f8a5f;--gl:#dff3ea;--ink:#14212f;--mute:#566574;--line:#cdd6df;--bg:#eef2f6;--pn:#fff;--tile:#eef2f6;--off:#e4e9ee;--bi:#fff}
+[data-theme=dark]{--g:#2fd49a;--gl:#12382d;--ink:#e9eff4;--mute:#9aabb8;--line:#2e3d4a;--bg:#0d141a;--pn:#16202a;--tile:#1e2b36;--off:#25323e;--bi:#04251a}
+[data-theme=contrast]{--g:#ffe14d;--gl:#2b2600;--ink:#fff;--mute:#ffe99a;--line:#fff;--bg:#000;--pn:#000;--tile:#141414;--off:#222;--bi:#000}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.35 system-ui,sans-serif}
+.app{height:100vh;display:grid;grid-template-columns:140px minmax(0,1fr)}
+aside{background:var(--pn);border-right:1.5px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.logo{font-weight:900;font-size:23px;color:var(--g);padding:2px 6px 10px;line-height:1}.logo small{display:block;font-size:8px;letter-spacing:.22em}
+aside a{padding:9px 10px;border-radius:8px;color:var(--mute);display:block;font-size:13px;font-weight:600;cursor:pointer}aside a.on{background:var(--gl);color:var(--g);font-weight:800}
+.sys{margin-top:auto;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11px;color:var(--mute)}.sys b{color:var(--g)}
+.right{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;min-width:0}
+header{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:6px 16px;background:var(--pn);border-bottom:1.5px solid var(--line)}
+header h1{margin:0;font-size:17px;font-weight:800}header small{color:var(--mute);font-size:11px}
+.sbox{margin:0 auto;display:flex;gap:6px;width:min(380px,100%)}.sbox input{flex:1}
+input,select{background:var(--pn);border:1.5px solid var(--line);color:var(--ink);padding:7px 10px;border-radius:8px;font:inherit;min-width:0}#q{text-transform:uppercase}
+select{padding:5px 8px;font-weight:600}
+button,.btn{background:var(--g);color:var(--bi);border:0;border-radius:8px;padding:6px 11px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+.ghost{background:var(--pn)!important;color:var(--ink)!important;border:1.5px solid var(--line)!important}.ghost:hover,.ghost.on{border-color:var(--g)!important;color:var(--g)!important}
+.live{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:11.5px;white-space:nowrap;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;background:#f5a524}.dot.on{background:#1fbf75;animation:p 1.5s infinite}@keyframes p{50%{opacity:.35}}
+.user{display:flex;align-items:center;gap:8px;font-size:11.5px;line-height:1.2}.user i{width:32px;height:32px;border-radius:50%;background:var(--off);display:grid;place-items:center;font-style:normal;font-weight:800}
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;padding:12px;min-height:0}
+.panel{background:var(--pn);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 2px 6px rgba(20,40,60,.1);min-width:0}
+.panel h2{font-size:13px;font-weight:800;margin:0 0 8px;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:8px}.panel h2 .r{margin-left:auto;font-weight:700;text-transform:none;letter-spacing:0;color:var(--g);font-size:12px}
+.mapcard{display:flex;flex-direction:column;min-height:0}
+.tools{display:flex;gap:4px;margin-left:auto;text-transform:none;letter-spacing:0}.tools button{padding:3px 9px;font-size:11.5px}
+.tb2{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:8px}.tb2 button{padding:4px 9px;font-size:12px}.tb2 .sp{flex:1}
+.north{width:28px;height:28px;border-radius:50%;background:var(--pn);border:1.5px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:10px;flex:none}
+.mapwrap{flex:1;min-height:320px;position:relative;border-radius:10px;overflow:hidden;background:linear-gradient(var(--tile),var(--off));border:1.5px solid var(--line)}
+#gl{position:absolute;inset:0}#gl canvas{display:block;width:100%;height:100%;cursor:grab}
+.leg{position:absolute;left:10px;bottom:10px;background:var(--pn);border:1.5px solid var(--line);border-radius:8px;padding:4px 9px;font-size:11px;color:var(--mute);pointer-events:none;opacity:.95}
+.col{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
+.video{position:relative;aspect-ratio:16/9;background:#0b1118;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#8b98a5;overflow:hidden;font-size:11px}
+.video img{width:100%;height:100%;object-fit:contain}.video .fs{position:absolute;top:5px;right:5px;padding:2px 7px}
+.bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;width:0;background:var(--g);transition:width .3s}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.tiles.three{grid-template-columns:repeat(3,1fr)}
+.tiles div{background:var(--tile);border-radius:8px;padding:6px 2px}.tiles span{display:block;color:var(--mute);font-size:10.5px;font-weight:600}.tiles b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.msg{font-size:11.5px;color:var(--mute);min-height:15px;margin-top:6px;word-break:break-word}
+.row{display:flex;gap:6px;margin-top:6px}.row .grow{flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left}.row input{width:48px;text-align:center}
+.badge{font-size:11.5px;font-weight:800;color:var(--g);background:var(--gl);border-radius:14px;padding:2px 10px;margin-left:auto;text-transform:none;letter-spacing:0}.badge.off{color:var(--mute);background:var(--off)}
+dl{display:grid;grid-template-columns:110px 1fr;gap:3px 6px;margin:0}dt{color:var(--mute);font-weight:600}dd{margin:0;font-weight:800;font-size:14px}.hl{background:var(--gl);border-radius:4px}
+.btns{display:flex;gap:8px;margin-top:10px}.btns button{flex:1}
+.lv{display:flex;gap:8px;padding:5px 9px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;font-weight:800;margin-top:4px}.lv i{font-style:normal;color:var(--mute);width:26px}.lv.on{border-color:var(--g);background:var(--gl)}.lv small{display:block;font-size:11px;color:var(--mute);font-weight:600;margin-top:1px}.lv>span:first-of-type{flex:1}.hint{font-size:11px;color:var(--mute);margin-top:8px;font-weight:600}
+details summary{cursor:pointer;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:var(--mute);font-weight:600;padding:3px 4px}td{padding:3px 4px;border-top:1px solid var(--line);white-space:nowrap}
+tr.sel td{background:var(--gl)}tbody tr{cursor:pointer}.tw{max-height:170px;overflow:auto;margin-top:6px}
+.other{padding:14px;overflow:auto;min-height:0}.pg{max-width:1150px;margin:0 auto}.pg .panel{margin-bottom:12px}.pgrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}.cards div{background:var(--tile);border:1.5px solid var(--line);border-radius:10px;padding:10px;text-align:center;color:var(--mute);font-weight:600;font-size:12px}.cards b{display:block;font-size:22px;color:var(--ink)}
+.other table{font-size:13px}.other th,.other td{padding:7px 8px}.other tbody tr:hover td{background:var(--gl)}.other tbody tr[data-id]{cursor:pointer}
+.frm{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px 14px;align-items:center;max-width:620px;font-weight:600}
+@media(max-width:1000px){html,body{height:auto}.app{height:auto;grid-template-columns:1fr}aside{display:none}main{grid-template-columns:1fr}.mapwrap{min-height:420px}.col{overflow:visible}}
 </style>
 </head>
 <body>
+<div class="app">
+<aside>
+  <div class="logo">RYM<small>GRENERGY</small></div>
+  <a class="on" data-nav="live">▦ Live View</a><a data-nav="ops">◧ Operations</a><a data-nav="inv">▤ Inventory</a><a data-nav="search">⌕ Container Search</a><a data-nav="rep">▥ Reports</a><a data-nav="users">☺ Users &amp; Roles</a><a data-nav="set">⚙ Settings</a>
+  <div class="sys">System Status<br><b>● Online</b><br>v1.5.2</div>
+</aside>
+<div class="right">
 <header>
-  <h1>Container Yard Monitor</h1>
+  <div><h1>Yard Management System</h1><small>Real-time tracking | Storage Identification | Asset Management</small></div>
+  <div class="sbox"><input id="q" placeholder="Search container / location / ID…"><button id="go">Find</button></div>
   <div class="live"><span class="dot" id="dot"></span><span id="status">connecting…</span></div>
-  <div class="stats">
-    <div class="stat"><b id="sTotal">0</b><span>Containers</span></div>
-    <div class="stat"><b id="sLast">–</b><span>Last update</span></div>
-    <div class="stat"><b id="sAmb">0</b><span>Heading unsure</span></div>
-  </div>
+  <label class="live">Mode <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="contrast">High contrast</option></select></label>
+  <label class="live" title="Scene lighting">☀ <input type="range" id="lightR" min="30" max="160" value="100" style="width:80px;padding:0"></label>
+  <div class="user"><i>YR</i><span>Yograj Rundhanker<br><small>Administrator</small></span></div>
 </header>
-
-<main>
-  <section class="panel">
-    <h2 id="mapTitle">Yard map (metres)</h2>
-    <canvas id="map" width="720" height="720"></canvas>
-    <div class="legend">
-      <span><i style="background:#3fb6ff"></i>Tier 1</span>
-      <span><i style="background:#3ddc97"></i>Tier 2</span>
-      <span><i style="background:#f5a524"></i>Tier 3+</span>
-      <span>Arrow = heading (toward door end when known) · dashed = heading uncertain</span>
-      <span>Live: bright outline = in the camera picture now, faded = out of view, dashed frame = camera view</span>
+<main id="vLive">
+  <section class="panel mapcard">
+    <h2>▣ <span id="mapTitle">Yard map</span><span class="r" id="mapInfo"></span>
+      <span class="tools"><button class="ghost" data-v="front">Front</button><button class="ghost" data-v="back">Back</button><button class="ghost" data-v="left">Left</button><button class="ghost" data-v="right">Right</button><button class="ghost" data-v="top">Top</button><button class="ghost" data-v="reset">Reset</button><button id="stk">▤ Stacked</button></span>
+      <span class="north" id="north">N</span></h2>
+    <div class="tb2">
+      <button class="ghost" id="zIn" title="Zoom in">＋</button><button class="ghost" id="zOut" title="Zoom out">－</button><button class="ghost" id="zFit">⤢ Fit all</button>
+      <span id="zoneBtns" style="display:contents"></span>
+      <button class="ghost" id="zSel">◎ Focus selected</button><button class="ghost" id="zDev">📍 Find device</button>
+      <button class="ghost on" id="lblBtn">🏷 Labels: on</button><button class="ghost" id="lockBtn">🔓 Wheel zoom: on</button><button class="ghost" id="perfBtn">⚡ Performance: balanced</button>
+      <span class="sp"></span>
+      <button class="ghost" id="csvInv">⬇ Inventory CSV</button><button class="ghost" id="csvLog">⬇ Sightings CSV</button>
     </div>
+    <div class="mapwrap"><div id="gl"></div><div class="leg">Drag = rotate · right-drag = pan · wheel = zoom · double-click = reset · click a container to select · every container shows its own code (L1 = bottom)</div></div>
   </section>
 
   <div class="col">
     <section class="panel" id="livePanel" style="display:none">
-      <h2>Live simulation</h2>
-      <div class="video"><img id="liveImg" style="display:none" alt="annotated video"><span id="liveEmpty">Play a video or start a camera</span></div>
+      <h2>▶ Video feed <small style="font-weight:400;color:var(--mute);text-transform:none">(Handheld camera)</small><span class="r" id="liveTag"></span></h2>
+      <div class="video" id="vbox"><img id="liveImg" style="display:none" alt="video"><span id="liveEmpty">Play a video or start a camera</span><button class="fs ghost" id="fs">⛶</button></div>
       <div class="bar"><i id="lvBar"></i></div>
-      <div class="chips" id="lvTags"></div>
-      <div class="detail" id="lvMsg">The map follows the video: boxes found in the picture appear on the map, boxes taken away disappear.</div>
-      <div class="search"><input type="file" id="lvFile" accept="video/*" style="text-transform:none"><button id="lvPlay">Play video</button></div>
-      <div class="search"><input id="lvCam" value="0" placeholder="0, 1 or rtsp://…" style="text-transform:none"><button id="lvStart">Start camera</button><button class="ghost" id="lvStop">Stop</button><button class="ghost" id="lvClear">Clear map</button></div>
+      <div class="tiles"><div><span>Status</span><b id="sStat">idle</b></div><div><span>Frame</span><b id="sFrame">—</b></div><div><span>In view</span><b id="sView">0</b></div><div><span>On map</span><b id="sMap">0</b></div></div>
+      <div class="msg" id="lvMsg">Choose a video or start a camera.</div>
+      <div class="row"><label class="btn ghost grow" for="lvFile" id="lvName">📁 Choose video…</label><input type="file" id="lvFile" accept="video/*" hidden><button id="lvPlay">▶ Play</button></div>
+      <div class="row"><input id="lvCam" value="0" title="camera index or rtsp:// URL"><button id="lvStart">● Camera</button><button class="ghost" id="lvStop">■ Stop</button><button class="ghost" id="lvClear">Clear map</button></div>
     </section>
-
-    <section class="panel" id="upPanel" style="display:none">
-      <h2>Upload video</h2>
-      <div class="search"><input type="file" id="upFile" accept="video/*" style="text-transform:none"><button id="upBtn">Process</button></div>
-      <div class="bar"><i id="upBar"></i></div>
-      <div class="detail" id="upMsg">Upload a room/whiteboard video; boxes are mapped to zone, segment and tier.</div>
-      <img id="upPrev" style="display:none;width:100%;border-radius:6px;margin-top:8px">
-      <div class="tablewrap"><table id="upTbl" style="display:none"><thead><tr><th>Zone / segment</th><th>Boxes</th><th>Max tier</th><th>Top z (m)</th></tr></thead><tbody id="upRows"></tbody></table></div>
-    </section>
-
-    <section class="panel" id="camPanel">
-      <h2>Live camera</h2>
-      <div class="video" id="videoBox">No live video source</div>
-    </section>
+    <section class="panel" id="camPanel"><h2>Live camera</h2><div class="video" id="videoBox">No live video source</div></section>
 
     <section class="panel">
-      <h2>Find a container</h2>
-      <div class="search">
-        <input id="q" placeholder="e.g. CSQU3054383" maxlength="11">
-        <button id="go">Find</button>
-        <button class="ghost" id="clear">Clear</button>
-      </div>
-      <div class="detail" id="detail">Click a container on the map or in the table.</div>
+      <h2>◆ Current handling <span class="badge off" id="hBadge">No target</span></h2>
+      <dl><dt>Container ID</dt><dd id="hId">—</dd><dt>Location</dt><dd id="hLoc">—</dd><dt>Area</dt><dd id="hArea">—</dd><dt>Zone</dt><dd id="hZone">—</dd>
+        <dt class="hl">Level</dt><dd class="hl" id="hLvl">—</dd><dt>GPS (Lat ; Long)</dt><dd id="hGps">— (no GPS data)</dd>
+        <dt>X (m)</dt><dd id="hX">—</dd><dt>Y (m)</dt><dd id="hY">—</dd><dt>Z (m)</dt><dd id="hZ">—</dd></dl>
+      <div id="stackList"></div>
+      <div class="btns"><button id="bId">◎ Identify / Confirm</button><button class="ghost" id="bStore">⚑ Mark as Stored</button></div>
     </section>
-
     <section class="panel">
-      <h2>Recent sightings</h2>
-      <div class="tablewrap">
-        <table>
-          <thead><tr><th>Time</th><th>Container</th><th>Checkpoint</th><th>x, y</th><th>Tier</th><th>z (m)</th><th>Hdg</th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
+      <h2>➤ Device location (XYZ)</h2>
+      <div class="tiles three"><div><span>X</span><b id="dx">—</b></div><div><span>Y</span><b id="dy">—</b></div><div><span>Z</span><b id="dz">—</b></div></div>
+      <div class="tiles" style="grid-template-columns:1fr 1fr;margin-top:6px"><div><span>Zone aimed at</span><b id="dZone">—</b></div><div><span>Level aimed at</span><b id="dLvl">—</b></div></div>
+      <div class="msg" id="dHint"></div>
     </section>
+    <section class="panel">
+      <h2>▦ Zone dimensions <span class="badge" id="zdName">—</span></h2>
+      <div class="tiles three"><div><span>X (m)</span><b id="zdX">—</b></div><div><span>Y (m)</span><b id="zdY">—</b></div><div><span>Z (m)</span><b id="zdZ">—</b></div></div>
+      <div class="msg" id="zdInfo"></div>
+    </section>
+    <details class="panel">
+      <summary>Upload video &amp; recent sightings</summary>
+      <div id="upPanel" style="display:none;margin-top:8px">
+        <div class="row"><input type="file" id="upFile" accept="video/*" style="flex:1;width:auto;text-align:left"><button id="upBtn">Process</button></div>
+        <div class="bar"><i id="upBar"></i></div><div class="msg" id="upMsg">Upload a room video; boxes are mapped to zone, segment and tier.</div>
+        <img id="upPrev" style="display:none;width:100%;border-radius:6px;margin-top:6px">
+        <div class="tw"><table id="upTbl" style="display:none"><thead><tr><th>Zone / segment</th><th>Boxes</th><th>Max tier</th><th>Top z</th></tr></thead><tbody id="upRows"></tbody></table></div>
+      </div>
+      <div class="tw"><table><thead><tr><th>Time</th><th>Container</th><th>Place</th><th>Tier</th></tr></thead><tbody id="rows"></tbody></table></div>
+    </details>
   </div>
 </main>
+<section id="vOther" class="other" style="display:none"></section>
+</div>
+</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const $ = id => document.getElementById(id);
-const cv = $('map'), ctx = cv.getContext('2d');
-let containers = [], recent = [], selected = null, path = [], yard = 100, hit = [];
-let layout = null, yardW = 100, yardH = 100, scale = 1, boxW = 12, boxH = 2.6;
-
-const tierColor = t => t <= 1 ? '#3fb6ff' : t === 2 ? '#3ddc97' : '#f5a524';
-const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const $ = id => document.getElementById(id), T = window.THREE;
+const PAL = ['#c0392b', '#2e6fa3', '#2f8f6b', '#d98a1f', '#7a4fa3', '#3b86a8', '#a8433f', '#4f6d8f'];
+let layout = null, W = 100, H = 100, boxW = 12, boxH = 2.6, th = 3, wh = 0, fh = 0;
+let raw = [], view = [], recent = [], selected = null, ls = { status: 'idle' }, liveOn = false, imgOn = false, stored = new Set(), stackMode = true;
+let dev = null, tgt = null, trail = [], dir = [0, 1], lastStatus = 'idle', lastSig = '', labels = true, goal = null, themeName = 'light', dragging = false, trailPts, sp, halo, pole, capS, devLbl, dcv, dtex, lastDevTxt = '', page = 'live';
+let hasHeading = false, lastRows = '', lastStack = '';   // v1.5.1: backend heading flag + panel change-detection caches
+const LV = 2.59, MAXL = 4;
+// v1.5.1: default refresh 2 s, auto-release of the selected container while live
+const cfg = Object.assign({ perf: 'balanced', labelPx: 22, rate: 2, trail: true, dot: true, lock: false, follow: false, labels: true, autoRelease: true }, (() => { try { return JSON.parse(localStorage.getItem('yardCfg') || '{}'); } catch { return {}; } })());
+const saveCfg = () => { try { localStorage.setItem('yardCfg', JSON.stringify(cfg)); } catch { } };
+labels = cfg.labels !== false;
 const fmtTime = iso => iso ? new Date(iso + (iso.endsWith('Z') || iso.includes('+') ? '' : 'Z')).toLocaleTimeString() : '–';
+const colOf = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PAL[h % PAL.length]; };
+const zoneOf = p => layout && layout.zones.find(z => p.x >= z.x && p.x < z.x + z.w);
+const levelOf = z => Math.min(4, Math.max(1, Math.ceil((z || 0) / 2.59)));
+const zoneBox = z => { const ys = z.segments.length ? z.segments : [{ y: 0, h: H }]; return { x0: z.x, x1: z.x + z.w, y0: Math.min(...ys.map(g => g.y)), y1: Math.max(...ys.map(g => g.y + g.h)), zH: MAXL * LV }; };
+const rg = (a, b) => `${a.toFixed(1)}–${b.toFixed(1)}`;
+async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
 
-async function j(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
-}
-
-// ---------- map ----------
-const P = 36;                                   // padding in px
-const sx = x => P + x * scale;
-const sy = y => cv.height - P - y * scale;
-function fit() {                                  // equal scale on both axes
-  scale = (cv.width - 2 * P) / yardW;
-  cv.height = Math.round(2 * P + yardH * scale);
-}
-fit();
-
-function drawBox(c, isSel) {
-  const w = boxW * scale, h = boxH * scale;
-  const th = (c.heading_deg - 90) * Math.PI / 180;      // 0° = north (up)
-  for (let k = c.z_tier - 1; k >= 1; k--) {                  // lower tiers peek out below (rough z)
-    ctx.save(); ctx.translate(sx(c.x) + 3 * k, sy(c.y) + 3 * k); ctx.rotate(th);
-    ctx.fillStyle = tierColor(k) + '88'; ctx.strokeStyle = 'rgba(0,0,0,.35)';
-    ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h); ctx.restore();
+// ================= 3D scene (x east, y north, z up  ->  three: X, -Z, Y) =================
+let R, sc, cm, gRoom, gBox, gDot, cone, ring, trailGeo, walls = [], boards = [], pick = [], floorM, lineM, amb, dlight;
+const orb = { t: 0, p: 1.05, r: 12, tx: 0, ty: .5, tz: 0 }, texC = {}, geoC = {}, matC = {};
+const defR = () => 1.5 * Math.max(W, H);
+function sprite(text, fg, bg, fs, k = 1) {
+  const key = text + fg + bg + fs;
+  if (!texC[key]) {
+    const c = document.createElement('canvas'), x = c.getContext('2d'); x.font = `800 ${fs}px system-ui`;
+    const w = Math.ceil(x.measureText(text).width) + 24, h = fs + 16; c.width = w; c.height = h; x.font = `800 ${fs}px system-ui`;
+    x.fillStyle = bg; x.strokeStyle = fg; x.lineWidth = 4; x.beginPath(); x.roundRect(2, 2, w - 4, h - 4, 10); x.fill(); x.stroke();
+    x.fillStyle = fg; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, w / 2, h / 2 + 1); texC[key] = { t: new T.CanvasTexture(c), a: w / h };
   }
-  ctx.save();
-  ctx.translate(sx(c.x), sy(c.y)); ctx.rotate(th);
-  ctx.globalAlpha = (c.live && !c.in_view ? .45 : 1) * (c.alpha === undefined ? 1 : c.alpha);
-  ctx.fillStyle = tierColor(c.z_tier) + (isSel ? 'ff' : 'cc');
-  ctx.strokeStyle = isSel ? css('--text') : c.in_view ? css('--accent') : 'rgba(0,0,0,.4)';
-  ctx.lineWidth = isSel ? 2 : c.in_view ? 2.5 : 1;
-  ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
-  ctx.setLineDash(c.heading_ambiguous ? [3, 3] : []);
-  ctx.beginPath(); ctx.moveTo(-w / 3, 0); ctx.lineTo(w / 2 + 6, 0);
-  ctx.moveTo(w / 2 + 6, 0); ctx.lineTo(w / 2 - 2, -4); ctx.moveTo(w / 2 + 6, 0); ctx.lineTo(w / 2 - 2, 4);
-  ctx.stroke(); ctx.restore();
+  const s = new T.Sprite(new T.SpriteMaterial({ map: texC[key].t, depthTest: false, transparent: true })), u = layout ? 1 : W / 20;
+  s.scale.set(.3 * u * k * texC[key].a, .3 * u * k, 1); s.userData.a = texC[key].a; s.renderOrder = 5; return s;
 }
+const ribs = (() => {
+  if (!T) return null; const c = document.createElement('canvas'); c.width = 64; c.height = 8; const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, 64, 8); x.fillStyle = '#b4b4b4'; for (let i = 0; i < 64; i += 8) x.fillRect(i, 0, 3, 8);
+  const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(1.5, 1); return t;
+})();
+const gm = (a, b, c) => geoC[[a, b, c]] || (geoC[[a, b, c]] = new T.BoxGeometry(a, b, c));
+const mm = (col, fade) => matC[col + fade] || (matC[col + fade] = new T.MeshLambertMaterial({ color: col, map: ribs, transparent: fade, opacity: fade ? .5 : 1 }));
 
-function drawLayout() {
-  layout.zones.forEach((z, zi) => {
-    ctx.fillStyle = zi ? 'rgba(245,165,36,.07)' : 'rgba(63,182,255,.07)';
-    ctx.fillRect(sx(z.x), sy(z.y + z.h), z.w * scale, z.h * scale);
-    ctx.fillStyle = css('--mute'); ctx.font = 'bold 13px system-ui';
-    ctx.fillText(z.name.toUpperCase(), sx(z.x) + 6, sy(z.y + z.h) + 16);
-    z.segments.forEach(s => {
-      ctx.strokeStyle = css('--line'); ctx.lineWidth = 1.5; ctx.setLineDash([]);
-      ctx.strokeRect(sx(s.x), sy(s.y + s.h), s.w * scale, s.h * scale);
-      ctx.fillStyle = css('--mute'); ctx.font = '10px system-ui';
-      ctx.fillText(s.name, sx(s.x) + 4, sy(s.y) - 5);
-      s.slots.forEach(sl => {
-        ctx.setLineDash([3, 3]); ctx.strokeStyle = css('--line');
-        ctx.strokeRect(sx(sl.x) - boxW * scale / 2, sy(sl.y) - boxH * scale / 2, boxW * scale, boxH * scale);
-        ctx.setLineDash([]);
-      });
+function applyScene() {
+  if (floorM) floorM.color.set(themeName === 'light' ? 0xcfd4d9 : themeName === 'dark' ? 0x2a3540 : 0x161616);
+  if (lineM) lineM.color.set(themeName === 'light' ? 0xffffff : themeName === 'dark' ? 0x4a5a68 : 0x777777);
+  if (amb) { const k = $('lightR').value / 100; amb.intensity = .8 * k; dlight.intensity = .55 * k; }
+}
+function axes() {
+  const L = layout ? 4 : W / 10, ax = (col, x, y, z, t) => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute([0, .03, 0, x, y, z], 3)); gRoom.add(new T.Line(g, new T.LineBasicMaterial({ color: col })));
+    const q = sprite(t, '#' + col.toString(16).padStart(6, '0'), '#fff', 26); q.position.set(x, y + .25, z); gRoom.add(q); };
+  ax(0xe5484d, L, .03, 0, 'X'); ax(0x1fa35d, 0, .03, -L, 'Y'); ax(0x1d6fe8, 0, L, 0, 'Z');
+}
+function buildRoom() {
+  if (gRoom) sc.remove(gRoom); gRoom = new T.Group(); sc.add(gRoom); walls = []; boards = [];
+  const flat = (w, h, x, z, col, y, op = 1) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: col, transparent: op < 1, opacity: op })); m.rotation.x = -Math.PI / 2; m.position.set(x, y, -z); gRoom.add(m); return m; };
+  floorM = flat(W, H, W / 2, H / 2, 0xcfd4d9, 0).material;
+  const g = layout ? 1 : 10, pts = []; for (let x = 0; x <= W; x += g) pts.push(x, .004, 0, x, .004, -H); for (let y = 0; y <= H; y += g) pts.push(0, .004, -y, W, .004, -y);
+  const lg = new T.BufferGeometry(); lg.setAttribute('position', new T.Float32BufferAttribute(pts, 3)); lineM = new T.LineBasicMaterial({ color: 0xffffff }); gRoom.add(new T.LineSegments(lg, lineM));
+  applyScene(); axes(); if (!layout) return;
+  const wall = (w, h, d, x, y, z, col, test) => {
+    const m = new T.MeshLambertMaterial({ color: col, transparent: true }), b = new T.Mesh(new T.BoxGeometry(w, h, d), m); b.position.set(x, y, z); gRoom.add(b); if (test) walls.push({ m, test });
+  };
+  wall(W + .4, wh, .2, W / 2, wh / 2, -H - .1, 0xf1f4f7, p => p.z < -H);
+  wall(.2, wh, H + .4, -.1, wh / 2, -H / 2, 0xe5eaef, p => p.x < 0);
+  wall(.2, wh, H + .4, W + .1, wh / 2, -H / 2, 0xe5eaef, p => p.x > W);
+  const dw = 1.6, dh = .95, fl = (W - dw) / 2;
+  wall(fl + .2, fh, .2, fl / 2 - .1, fh / 2, .1, 0xdfe4e9); wall(fl + .2, fh, .2, W - fl / 2 + .1, fh / 2, .1, 0xdfe4e9); wall(dw, fh - dh, .2, W / 2, dh + (fh - dh) / 2, .1, 0xdfe4e9);
+  const gl = new T.Mesh(new T.PlaneGeometry(dw, dh), new T.MeshBasicMaterial({ color: 0x9fd3e6, transparent: true, opacity: .6, side: T.DoubleSide })); gl.position.set(W / 2, dh / 2, .12); gRoom.add(gl);
+  const en = sprite('ENTRY', '#0f8a5f', '#fff', 26); en.position.set(W / 2, fh + .3, .1); gRoom.add(en);
+  layout.zones.forEach(z => {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 512; const t = new T.CanvasTexture(c);
+    const m = new T.Mesh(new T.PlaneGeometry(z.w - .8, (z.w - .8) / 2), new T.MeshBasicMaterial({ map: t })); m.position.set(z.x + z.w / 2, 1.45, -H + .02); gRoom.add(m); boards.push({ z, c, t, key: '' });
+    z.segments.forEach(sg => {
+      flat(sg.w + .12, sg.h + .12, sg.x + sg.w / 2, sg.y + sg.h / 2, 0xf2b705, .006); flat(sg.w, sg.h, sg.x + sg.w / 2, sg.y + sg.h / 2, 0xdde2e7, .01);
+      sg.slots.forEach(sl => flat(boxW, boxH, sl.x, sl.y, 0xc3cad1, .014));
+      const s = sprite(sg.name.toUpperCase(), '#1d4ed8', '#fff', 24); s.position.set(sg.x + sg.w / 2, .06, -.55); gRoom.add(s);
+      const s2 = sprite(`X ${rg(sg.x, sg.x + sg.w)} · Y ${rg(sg.y, sg.y + sg.h)} m`, '#0d1b2a', '#fff', 20, .75); s2.position.set(sg.x + sg.w / 2, .06, -1.3); gRoom.add(s2);
     });
   });
-  ctx.font = '11px system-ui';
 }
-
-function draw() {
-  ctx.clearRect(0, 0, cv.width, cv.height);
-  ctx.strokeStyle = css('--line'); ctx.fillStyle = css('--mute'); ctx.font = '11px system-ui';
-  ctx.lineWidth = 1; ctx.setLineDash([]);
-  const step = layout ? 1 : yard > 150 ? 50 : 20;
-  for (let v = 0; v <= yardW; v += step) {
-    ctx.beginPath(); ctx.moveTo(sx(v), sy(0)); ctx.lineTo(sx(v), sy(yardH)); ctx.stroke();
-    ctx.fillText(v, sx(v) - 6, cv.height - P + 14);
+function paintBoard(b, act, lv) {
+  const x = b.c.getContext('2d'), bx = zoneBox(b.z); x.fillStyle = '#fff'; x.fillRect(0, 0, 1024, 512); x.fillStyle = act ? '#f5a524' : '#2bb4e8'; x.fillRect(0, 0, 1024, 84);
+  x.fillStyle = '#fff'; x.font = 'bold 54px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(b.z.name.toUpperCase(), 512, 44);
+  [4, 3, 2, 1].forEach((L, i) => {
+    const on = act && lv === L, y = 100 + i * 98; x.fillStyle = on ? '#bfe9d6' : '#eef2f5'; x.strokeStyle = on ? '#0f8a5f' : '#c5ced7'; x.lineWidth = 4; x.fillRect(24, y, 560, 82); x.strokeRect(24, y, 560, 82);
+    x.fillStyle = '#1b2a3a'; x.textAlign = 'left'; x.font = 'bold 46px system-ui'; x.fillText('L' + L, 48, y + 43); x.textAlign = 'right'; x.font = 'bold 32px system-ui'; x.fillText(`Z ${((L - 1) * LV).toFixed(1)}–${(L * LV).toFixed(1)} m`, 566, y + 43);
+  });
+  [['X (m)', rg(bx.x0, bx.x1), 'W ' + (bx.x1 - bx.x0).toFixed(1)], ['Y (m)', rg(bx.y0, bx.y1), 'D ' + (bx.y1 - bx.y0).toFixed(1)], ['Z (m)', '0.0–' + bx.zH.toFixed(1), 'H ' + bx.zH.toFixed(2)]].forEach((r, i) => {
+    const y = 100 + i * 132; x.fillStyle = '#eef2f5'; x.fillRect(610, y, 390, 118); x.strokeStyle = '#c5ced7'; x.lineWidth = 3; x.strokeRect(610, y, 390, 118);
+    x.textAlign = 'left'; x.fillStyle = '#566574'; x.font = 'bold 28px system-ui'; x.fillText(r[0], 628, y + 28); x.fillStyle = '#0d1b2a'; x.font = 'bold 46px system-ui'; x.fillText(r[1], 628, y + 70);
+    x.fillStyle = '#566574'; x.font = 'bold 26px system-ui'; x.textAlign = 'right'; x.fillText(r[2] + ' m', 984, y + 100);
+  });
+  x.strokeStyle = '#9fb0c0'; x.lineWidth = 8; x.strokeRect(0, 0, 1024, 512); b.t.needsUpdate = true;
+}
+function rebuildBoxes() {
+  const sig = selected + '|' + labels + '|' + view.map(c => [c.container_id, c.x, c.y, c.z_tier, c.in_view ? 1 : 0].join()).join(';'); if (sig === lastSig) return; lastSig = sig;
+  // v1.5.1: dispose per-box materials (edge lines, highlight overlays, label sprites) so GPU memory doesn't grow.
+  // Shared geometries, cached textures and the cached Lambert box materials are intentionally NOT disposed.
+  while (gBox.children.length) {
+    const o = gBox.children[0];
+    o.traverse(n => { if (n.material && !n.material.isMeshLambertMaterial) n.material.dispose(); });
+    gBox.remove(o);
   }
-  for (let v = 0; v <= yardH; v += step) {
-    ctx.beginPath(); ctx.moveTo(sx(0), sy(v)); ctx.lineTo(sx(yardW), sy(v)); ctx.stroke();
-    ctx.fillText(v, P - 26, sy(v) + 4);
-  }
-  if (layout) drawLayout();
-  if (viewShown) {                                              // what the camera sees right now, on the map
-    ctx.save(); ctx.beginPath(); ctx.rect(sx(0), sy(yardH), yardW * scale, yardH * scale); ctx.clip();
-    ctx.setLineDash([8, 5]); ctx.strokeStyle = css('--accent'); ctx.fillStyle = 'rgba(63,182,255,.07)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); viewShown.forEach((p, i) => i ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1])));
-    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
-  }
-  ctx.fillStyle = css('--mute'); ctx.fillText('N ↑', cv.width - 40, 20);
-  if (path.length > 1) {                                  // route of selected container
-    ctx.strokeStyle = css('--accent'); ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
-    ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(sx(p.x), sy(p.y)) : ctx.moveTo(sx(p.x), sy(p.y)));
-    ctx.stroke(); ctx.setLineDash([]);
-    path.forEach(p => { ctx.fillStyle = css('--accent'); ctx.beginPath(); ctx.arc(sx(p.x), sy(p.y), 3, 0, 7); ctx.fill(); });
-  }
-  hit = [];
-  const cs = shown();
-  cs.forEach(c => {
-    drawBox(c, c.container_id === selected);
-    hit.push({ id: c.container_id, x: sx(c.x), y: sy(c.y) });
-    const same = cs.filter(o => Math.abs(o.gx - c.gx) < 1e-6 && Math.abs(o.gy - c.gy) < 1e-6);        // one label per stack, on its top box
-    if (c.z_tier === Math.max(...same.map(o => o.z_tier)) && (c.container_id === selected || cs.length <= 16 || same.length > 1)) {
-      ctx.globalAlpha = c.alpha === undefined ? 1 : c.alpha; ctx.fillStyle = css('--text'); ctx.font = c.live ? 'bold 11px system-ui' : '10px system-ui';
-      ctx.fillText(c.container_id + (same.length > 1 ? ` ×${same.length}` : '') + (c.z_tier > 1 ? ' · z ' + c.z_m + ' m' : ''), sx(c.x) - 28, sy(c.y) - (layout ? boxH * scale / 2 + 3 : 12));
-      ctx.globalAlpha = 1;
+  pick = [];
+  view.forEach(c => {
+    const hd = ((c.heading_deg % 180) + 180) % 180, aX = Math.abs(hd - 90) < 45, g = aX ? gm(boxW, th * .95, boxH) : gm(boxH, th * .95, boxW), fade = c.live && !c.in_view, sel = c.container_id === selected;
+    const m = new T.Mesh(g, mm(colOf(c.container_id), fade)); m.position.set(c.x, (c.z_tier - .5) * th, -c.y); m.userData.id = c.container_id; gBox.add(m); pick.push(m);
+    m.add(new T.LineSegments(g.userData.e || (g.userData.e = new T.EdgesGeometry(g)), new T.LineBasicMaterial({ color: 0x0d1b2a, transparent: true, opacity: fade ? .3 : .9 })));
+    if (sel || (c.live && c.in_view)) { const o = new T.Mesh(g, new T.MeshBasicMaterial({ color: sel ? 0xffc400 : 0x1fbf75, transparent: true, opacity: sel ? .5 : .22, depthWrite: false })); o.scale.setScalar(1.07); m.add(o); }
+    if (labels) {
+      const s = sprite(`L${c.z_tier}  ${c.container_id} · Z ${(c.z_m - LV).toFixed(1)}–${c.z_m.toFixed(1)}`, sel ? '#8a5a00' : '#0d1b2a', sel ? 'rgba(255,214,0,.97)' : 'rgba(255,255,255,.96)', 30, 1.5);
+      s.position.set(c.x, (c.z_tier - .5) * th, -c.y); gBox.add(s);
     }
   });
 }
-
-cv.addEventListener('click', e => {
-  const r = cv.getBoundingClientRect(), k = cv.width / r.width;
-  const mx = (e.clientX - r.left) * k, my = (e.clientY - r.top) * k;
-  let best = null, d = 40;
-  hit.forEach(h => { const dd = Math.hypot(h.x - mx, h.y - my); if (dd < d) { d = dd; best = h.id; } });
-  if (best) select(best);
-});
-
-// ---------- selection / detail ----------
-async function select(id) {
-  selected = id; $('q').value = id;
-  try {
-    const hist = await j(`/containers/${id}/history`);
-    path = hist; const l = hist[hist.length - 1];
-    $('detail').innerHTML = l
-      ? `<b>${id}</b> is at <b>${l.checkpoint}</b> · x ${l.x.toFixed(1)} m, y ${l.y.toFixed(1)} m · tier ${l.z_tier} (top z ≈ ${l.z_m} m) · heading ${l.heading_deg.toFixed(0)}°${l.heading_ambiguous ? ' (unsure which end)' : ''}<br>${hist.length} sighting(s) · last seen ${fmtTime(l.seen_at)}`
-      : `No sightings for ${id}.`;
-  } catch { $('detail').textContent = 'Lookup failed.'; }
-  render();
+function init3d() {
+  const el = $('gl'); if (!T) { el.innerHTML = '<div style="padding:24px;color:#6b7885">The 3D view needs internet once to load three.js (cdnjs.cloudflare.com).</div>'; return; }
+  R = new T.WebGLRenderer({ antialias: cfg.perf === 'high', alpha: true, powerPreference: 'high-performance' }); applyPerf(); el.appendChild(R.domElement);
+  sc = new T.Scene(); cm = new T.PerspectiveCamera(40, 1, .1, 2000); amb = new T.AmbientLight(0xffffff, .8); sc.add(amb);
+  dlight = new T.DirectionalLight(0xffffff, .55); dlight.position.set(4, 10, 8); sc.add(dlight);
+  gBox = new T.Group(); sc.add(gBox); gDot = new T.Group(); sc.add(gDot);
+  const u = layout ? 1 : W / 20;
+  const dm = (c, o = 1) => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthTest: false, depthWrite: false, side: T.DoubleSide });
+  halo = new T.Mesh(new T.CircleGeometry(1, 40), dm(0x1d6fe8, .22)); halo.rotation.x = -Math.PI / 2; halo.position.y = .02; halo.renderOrder = 8; gDot.add(halo);
+  ring = new T.Mesh(new T.RingGeometry(.85, 1, 40), dm(0xffffff, .95)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; ring.renderOrder = 9; gDot.add(ring);
+  sp = new T.Mesh(new T.SphereGeometry(1, 24, 16), dm(0x1d6fe8)); sp.renderOrder = 10; gDot.add(sp);
+  pole = new T.Mesh(new T.BoxGeometry(1, 1, 1), dm(0x1d6fe8, .75)); pole.renderOrder = 9; gDot.add(pole);
+  capS = new T.Mesh(new T.SphereGeometry(1, 16, 12), dm(0x2bbee8)); capS.renderOrder = 10; gDot.add(capS);
+  dcv = document.createElement('canvas'); dcv.width = 520; dcv.height = 56; dtex = new T.CanvasTexture(dcv);
+  devLbl = new T.Sprite(new T.SpriteMaterial({ map: dtex, depthTest: false, transparent: true })); devLbl.renderOrder = 11; gDot.add(devLbl);
+  const cg = new T.ConeGeometry(.8 * u, 2.2 * u, 24, 1, true); cg.translate(0, -1.1 * u, 0); cg.rotateX(Math.PI / 2);
+  cone = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x2bbee8, transparent: true, opacity: .25, side: T.DoubleSide, depthWrite: false, depthTest: false })); cone.position.y = .3 * u; cone.renderOrder = 7; gDot.add(cone);
+  trailGeo = new T.BufferGeometry(); trailGeo.setAttribute('position', new T.BufferAttribute(new Float32Array(360), 3)); trailGeo.setDrawRange(0, 0);
+  trailPts = new T.Points(trailGeo, new T.PointsMaterial({ color: 0xe5484d, size: 5, sizeAttenuation: false, depthTest: false })); trailPts.renderOrder = 6; sc.add(trailPts);
+  new ResizeObserver(() => { const w = el.clientWidth, h = el.clientHeight; if (w && h) { R.setSize(w, h); cm.aspect = w / h; cm.updateProjectionMatrix(); } }).observe(el);
+  const d = R.domElement; let drag = null, ray = new T.Raycaster();
+  d.addEventListener('contextmenu', e => e.preventDefault());
+  d.addEventListener('pointerdown', e => { goal = null; dragging = true; drag = { x: e.clientX, y: e.clientY, moved: 0, pan: e.button === 2 || e.shiftKey }; d.setPointerCapture(e.pointerId); d.style.cursor = 'grabbing'; });
+  d.addEventListener('pointermove', e => {
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
+    if (drag.pan) { const k = orb.r * .0016; orb.tx += -Math.cos(orb.t) * dx * k - Math.sin(orb.t) * dy * k; orb.tz += Math.sin(orb.t) * dx * k - Math.cos(orb.t) * dy * k; }
+    else { orb.t -= dx * .008; orb.p = Math.min(1.52, Math.max(.05, orb.p - dy * .006)); }
+  });
+  d.addEventListener('pointerup', e => {
+    d.style.cursor = 'grab'; dragging = false; if (!drag) return; const moved = drag.moved; drag = null; if (moved > 5) return;
+    const b = d.getBoundingClientRect(); ray.setFromCamera(new T.Vector2((e.clientX - b.left) / b.width * 2 - 1, -(e.clientY - b.top) / b.height * 2 + 1), cm);
+    const h = ray.intersectObjects(pick)[0]; selected = h ? h.object.userData.id : null; panel();
+  });
+  d.addEventListener('wheel', e => { if (cfg.lock) return; e.preventDefault(); const f = Math.exp(Math.max(-120, Math.min(120, e.deltaY)) * .0012); goal = Object.assign(goal || {}, { r: Math.min(defR() * 3, Math.max(3, curR() * f)) }); }, { passive: false });
+  d.addEventListener('dblclick', () => setView('reset'));
+  buildRoom(); setView('reset'); Object.assign(orb, goal); goal = null; requestAnimationFrame(loop);
 }
+const fly = o => { goal = Object.assign({}, o); };
+function setView(v) {
+  const pr = { front: [0, 1.05], back: [Math.PI, 1.05], left: [-Math.PI / 2, 1.05], right: [Math.PI / 2, 1.05], top: [0, .06], reset: [0, 1.05] }[v];
+  fly({ t: pr[0], p: pr[1], r: defR(), tx: W / 2, ty: layout ? .5 : 0, tz: -H / 2 });
+}
+const curR = () => goal && goal.r != null ? goal.r : orb.r;
+function zoomBy(f) { fly({ ...orb, ...(goal || {}), r: Math.min(defR() * 3, Math.max(3, curR() * f)) }); }
+function zoomZone(name) {
+  const z = layout && layout.zones.find(z => z.name === name); if (!z) return setView('reset');
+  fly({ t: 0, p: .95, r: Math.max(z.w * 1.15, H * .9), tx: z.x + z.w / 2, ty: wh / 3, tz: -H / 2 });
+}
+function focusBox(id) {
+  const c = view.find(c => c.container_id === id); if (!c) return;
+  fly({ t: 0, p: 1.0, r: Math.max(8, boxW * 1.8), tx: c.x, ty: (c.z_tier - .5) * th, tz: -c.y });
+}
+function paintDev(txt) { const x = dcv.getContext('2d'); x.clearRect(0, 0, 520, 56); x.fillStyle = '#1d6fe8'; x.strokeStyle = '#fff'; x.lineWidth = 4; x.beginPath(); x.roundRect(2, 2, 516, 52, 12); x.fill(); x.stroke(); x.fillStyle = '#fff'; x.font = '800 26px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, 260, 29); dtex.needsUpdate = true; }
+let t0 = performance.now();
+function loop(now) {
+  if (now - t0 < ({ low: 66, balanced: 33, high: 0 }[cfg.perf] || 0)) { requestAnimationFrame(loop); return; }
+  const dt = Math.min(.1, (now - t0) / 1000); t0 = now; moveDot(dt);
+  if (goal) { let done = true; for (const k in goal) { const dd = goal[k] - orb[k]; orb[k] += dd * Math.min(1, dt * 7); if (Math.abs(dd) > .01) done = false; } if (done) goal = null; }
+  cm.position.set(orb.tx + orb.r * Math.sin(orb.p) * Math.sin(orb.t), orb.ty + orb.r * Math.cos(orb.p), orb.tz + orb.r * Math.sin(orb.p) * Math.cos(orb.t)); cm.lookAt(orb.tx, orb.ty, orb.tz);
+  walls.forEach(w => w.m.opacity = w.test(cm.position) ? .1 : 1);
+  $('north').style.transform = `rotate(${orb.t}rad)`;
+  const e = 2 * orb.r * Math.tan(Math.PI / 9) / Math.max(200, R.domElement.clientHeight), lh = cfg.labelPx * e;
+  gBox.children.forEach(q => { if (q.isSprite) q.scale.set(lh * q.userData.a, lh, 1); });
+  if (cfg.follow && dev && !dragging && !goal) { orb.tx += (dev.x - orb.tx) * Math.min(1, dt * 3); orb.tz += (-dev.y - orb.tz) * Math.min(1, dt * 3); }
+  gDot.visible = !!dev && cfg.dot; trailPts.visible = cfg.trail; if (dev) {
+    const pu = .5 + .5 * Math.sin(now / 300), dz = Math.max(dev.z, .05), cu = layout ? 1 : W / 20;
+    gDot.position.set(dev.x, 0, -dev.y); cone.rotation.y = Math.atan2(-dir[0], dir[1]); cone.scale.setScalar(Math.max(1, orb.r * .05));
+    cone.position.y = Math.max(.3 * cu, dev.z);                                  // v1.5.1: cone now sits at the real camera height
+    sp.scale.setScalar(9 * e); sp.position.y = 9 * e; halo.scale.setScalar((26 + 8 * pu) * e); ring.scale.setScalar((16 + 6 * pu) * e);
+    pole.scale.set(2.2 * e, dz, 2.2 * e); pole.position.y = dz / 2; capS.scale.setScalar(5 * e); capS.position.y = dz;
+    devLbl.scale.set(26 * e * 520 / 56, 26 * e, 1); devLbl.position.y = dz + 28 * e;
+    const tx = `DEVICE  X ${dev.x.toFixed(1)}  Y ${dev.y.toFixed(1)}  Z ${dev.z.toFixed(1)}`; if (tx !== lastDevTxt) { lastDevTxt = tx; paintDev(tx); }
+  }
+  R.render(sc, cm); requestAnimationFrame(loop);
+}
+
+// ================= blue dot: enters through the door, then follows the camera =================
+function moveDot(dt) {
+  if (!dev || !tgt) return;
+  let gx = tgt.x, gy = tgt.y; if (layout && dev.y < .3 && gy > .3) { gx = W / 2; gy = .6; }
+  const dx = gx - dev.x, dy = gy - dev.y, dist = Math.hypot(dx, dy);
+  if (dist > .02) {
+    const step = Math.min(dist, Math.min(2.2, dist * 3) * dt); dev.x += dx / dist * step; dev.y += dy / dist * step;
+    if (!hasHeading && step / dt > .15) dir = [dir[0] * .85 + dx / dist * .15, dir[1] * .85 + dy / dist * .15];   // fallback: derive from movement only if backend sends no heading
+  }
+  dev.z += (tgt.z - dev.z) * Math.min(1, dt * 3);
+  const l = trail[trail.length - 1]; if (!l || Math.hypot(dev.x - l[0], dev.y - l[1]) > .08) {
+    trail.push([dev.x, dev.y]); if (trail.length > 120) trail.shift();
+    const a = trailGeo.attributes.position.array; trail.forEach((p, i) => { a[i * 3] = p[0]; a[i * 3 + 1] = .04; a[i * 3 + 2] = -p[1]; }); trailGeo.attributes.position.needsUpdate = true; trailGeo.setDrawRange(0, trail.length);
+  }
+}
+function setTarget() {
+  if (ls.status === 'idle') { dev = tgt = null; trail = []; hasHeading = false; if (trailGeo) trailGeo.setDrawRange(0, 0); lastStatus = 'idle'; return; }
+  if (lastStatus === 'idle' && layout) { dev = { x: W / 2, y: -1.3, z: 0 }; trail = []; dir = [0, 1]; }
+  lastStatus = ls.status;
+  let d = [ls.device, ls.camera, ls.cam].find(o => o && isFinite(o.x) && isFinite(o.y));
+  if (!d) {
+    const v = view.filter(c => c.in_view), a = k => v.reduce((t, c) => t + k(c), 0) / v.length;
+    if (v.length) d = { x: a(c => c.x), y: a(c => c.y), z: a(c => (c.z_tier - .5) * 2.59) };
+  }
+  if (d) {
+    tgt = { x: d.x, y: d.y, z: +d.z || 0 }; if (!dev) dev = { ...tgt };
+    // v1.5.1: if the backend sends a heading (degrees, 0 = +Y/north, clockwise), point the cone with it
+    const hdg = [d.heading_deg, d.heading, d.yaw_deg, d.yaw].find(v => v != null && isFinite(v));
+    if (hdg != null) { hasHeading = true; const r = hdg * Math.PI / 180; dir = [Math.sin(r), Math.cos(r)]; } else hasHeading = false;
+  }
+}
+
+// ================= data + panels =================
+function makeView() {
+  if (!(layout && stackMode)) return raw.map(c => ({ ...c, _y: c.y }));
+  const by = {}, out = []; raw.forEach(c => (by[c.checkpoint] = by[c.checkpoint] || []).push(c));
+  layout.zones.forEach(z => z.segments.forEach(sg => {
+    const s0 = sg.slots[Math.floor(sg.slots.length / 2)];
+    (by[z.name + '/' + sg.name] || []).sort((a, b) => b.y - a.y).forEach((c, i) => out.push({ ...c, _y: c.y, x: s0.x, y: s0.y, z_tier: i + 1, z_m: +((i + 1) * 2.59).toFixed(2) }));
+  }));
+  return out.concat(raw.filter(c => !layout.zones.some(z => z.segments.some(sg => z.name + '/' + sg.name === c.checkpoint))).map(c => ({ ...c, _y: c.y })));
+}
+function detected() {
+  if (selected) return view.find(c => c.container_id === selected) || null;
+  if (!dev || !view.length) return null;
+  const v = view.filter(c => c.in_view), pool = v.length ? v : view, sc2 = c => (c.x - dev.x) ** 2 + (c.y - dev.y) ** 2 - .001 * c.z_tier;
+  return pool.reduce((a, b) => sc2(b) < sc2(a) ? b : a);
+}
+function pos(c) {
+  const z = layout && c && layout.zones.find(z => z.name === (c.checkpoint || '').split('/')[0]), cp = c ? c.checkpoint || '—' : '—';
+  if (!z) return { a: cp, z: '—', loc: cp };
+  const si = z.segments.findIndex(g => g.name === c.checkpoint.split('/')[1]), g = z.segments[si], L = z.name.replace(/^zone-?/i, '');
+  const bay = g ? g.slots.reduce((b, sl, i) => Math.abs(sl.y - c._y) < Math.abs(g.slots[b].y - c._y) ? i : b, 0) + 1 : '?';
+  return { a: L, z: si + 1, loc: `${L}${si + 1}-${bay}` };
+}
+function panel() {
+  const c = detected(), p = pos(c), set = (id, v) => { const e = $(id); if (e.textContent !== String(v)) e.textContent = v; };
+  set('hId', c ? c.container_id : '—'); set('hLoc', c ? p.loc : '—'); set('hArea', c ? p.a : '—'); set('hZone', c ? p.z : '—'); set('hLvl', c ? c.z_tier : '—');
+  set('hX', c ? c.x.toFixed(2) : '—'); set('hY', c ? c.y.toFixed(2) : '—'); set('hZ', c ? `${c.z_m} (Level ${c.z_tier})` : '—');
+  const st = c && stored.has(c.container_id); set('hBadge', !c ? 'No target' : st ? 'Stored ✓' : 'Target Identified'); $('hBadge').className = 'badge' + (c ? '' : ' off');
+  set('bStore', st ? '⚑ Stored ✓' : '⚑ Mark as Stored');
+  const sl = $('stackList');
+  let sh = '';
+  if (c) { const same = view.filter(v => v.x === c.x && v.y === c.y).sort((a, b) => b.z_tier - a.z_tier);
+    sh = `<div class="hint">Stack · ${same.length} container(s)</div>` + same.map(v => `<div class="lv${v.container_id === c.container_id ? ' on' : ''}" data-id="${v.container_id}"><i>L${v.z_tier}</i><span>${v.container_id}<small>X ${v.x.toFixed(2)} · Y ${v.y.toFixed(2)} · Z ${(v.z_m - LV).toFixed(2)}–${v.z_m.toFixed(2)} m</small></span>${stored.has(v.container_id) ? ' <span style="margin-left:auto;color:var(--g)">stored ✓</span>' : ''}</div>`).join(''); }
+  if (sh !== lastStack) {                                                          // v1.5.1: only touch the DOM when the stack actually changed
+    lastStack = sh; sl.innerHTML = sh; sl.querySelectorAll('.lv').forEach(e => e.onclick = () => { selected = e.dataset.id; panel(); });
+  }
+  set('dx', dev ? dev.x.toFixed(2) + ' m' : '—'); set('dy', dev ? dev.y.toFixed(2) + ' m' : '—'); set('dz', dev ? dev.z.toFixed(2) + ' m' : '—');
+  const dz = dev && zoneOf(dev); set('dZone', dz ? dz.name : '—'); set('dLvl', dev && layout ? 'L' + levelOf(dev.z) : '—');
+  set('dHint', dev ? 'Blue dot = camera position on the floor · blue pole = camera height · red dots = path walked' : 'No device position yet — press Play or Camera to start tracking');
+  const az = (c && layout && layout.zones.find(z => z.name === (c.checkpoint || '').split('/')[0])) || (dev && zoneOf(dev)) || (layout && layout.zones[0]);
+  if (az) { const bx = zoneBox(az), n = view.filter(v => (v.checkpoint || '').startsWith(az.name + '/')).length; set('zdName', az.name); set('zdX', rg(bx.x0, bx.x1)); set('zdY', rg(bx.y0, bx.y1)); set('zdZ', '0.0–' + bx.zH.toFixed(2));
+    set('zdInfo', `Size ${(bx.x1 - bx.x0).toFixed(1)} × ${(bx.y1 - bx.y0).toFixed(1)} × ${bx.zH.toFixed(2)} m (W×D×H) · ${az.segments.length} segment(s) · ${n} container(s) · ${MAXL} levels of ${LV} m`); }
+  set('liveTag', liveOn ? '● Live' : ''); set('mapInfo', view.length + ' container(s)');
+  set('sStat', ls.status || 'idle'); set('sFrame', ls.frame || '—'); set('sView', ls.in_view || 0); set('sMap', view.length);
+  boards.forEach(b => { const act = !!(dev && zoneOf(dev) === b.z), lv = dev ? levelOf(dev.z) : 0, k = act + '' + lv; if (k !== b.key) { b.key = k; paintBoard(b, act, lv); } });
+  if (R) rebuildBoxes();
+  const rh = recent.map(r => `<tr data-id="${r.container_id}" class="${r.container_id === selected ? 'sel' : ''}"><td>${fmtTime(r.seen_at)}</td><td>${r.container_id}</td><td>${r.checkpoint}</td><td>${r.z_tier}</td></tr>`).join('');
+  if (rh !== lastRows) {                                                           // v1.5.1: skip identical table rewrites
+    lastRows = rh; $('rows').innerHTML = rh;
+    document.querySelectorAll('#rows tr').forEach(tr => tr.onclick = () => { selected = tr.dataset.id; panel(); });
+  }
+}
+async function tick() {
+  try {
+    [raw, recent, ls] = await Promise.all([j('/containers'), j('/sightings/recent?limit=15'), layout ? j('/live/state').catch(() => ({ status: 'idle' })) : Promise.resolve({ status: 'idle' })]);
+    liveOn = ls.status === 'running'; showLive(ls); if (ls.status !== 'idle') raw = ls.containers; view = makeView();
+    // v1.5.1: while live, let the "Current handling" panel follow the camera once the selected container leaves the view
+    if (selected && liveOn && cfg.autoRelease && !view.some(c => c.container_id === selected && c.in_view)) selected = null;
+    if (!layout) { const m = Math.max(0, ...raw.map(c => Math.max(c.x, c.y))), y = Math.max(100, Math.ceil(m / 50) * 50); if (y !== W) { W = H = y; if (R) { buildRoom(); setView('reset'); } } }
+    setTarget(); $('dot').className = 'dot on'; $('status').textContent = liveOn ? 'live · following the video' : 'live · updating every ' + cfg.rate + ' s'; panel(); if (page === 'ops') renderPage(); else if (page === 'inv' || page === 'search') fillRows();
+  } catch { $('dot').className = 'dot'; $('status').textContent = 'disconnected — retrying'; }
+}
+$('bId').onclick = () => { const c = detected(); if (c) { selected = c.container_id; panel(); } };
+$('bStore').onclick = () => { const c = detected(); if (!c) return; stored.has(c.container_id) ? stored.delete(c.container_id) : stored.add(c.container_id); panel(); };
 $('go').onclick = async () => {
-  const id = $('q').value.trim().toUpperCase();
-  if (!id) return;
-  try { await j(`/containers/${id}/latest`); select(id); }
-  catch (e) { $('detail').textContent = e.message == 422 ? `${id} is not a valid container number.` : `${id} has not been seen yet.`; }
+  const id = $('q').value.trim().toUpperCase(); if (!id) return;
+  if (view.some(c => c.container_id === id)) { selected = id; nav('live'); focusBox(id); return panel(); }
+  try { await j(`/containers/${id}/latest`); selected = id; panel(); } catch { $('status').textContent = id + ' not found'; }
 };
 $('q').addEventListener('keydown', e => e.key === 'Enter' && $('go').click());
-$('clear').onclick = () => { selected = null; path = []; $('q').value = ''; $('detail').textContent = 'Click a container on the map or in the table.'; render(); };
+document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => setView(b.dataset.v));
+$('stk').onclick = () => { stackMode = !stackMode; $('stk').textContent = stackMode ? '▤ Stacked' : '▭ True slots'; lastSig = ''; view = makeView(); panel(); };
+$('fs').onclick = () => $('vbox').requestFullscreen && $('vbox').requestFullscreen();
+$('lvFile').onchange = () => $('lvName').textContent = '📁 ' + ($('lvFile').files[0] ? $('lvFile').files[0].name : 'Choose video…');
 
-// ---------- table + stats ----------
-let lastRows = '';
-function render() {
-  const html = recent.map(r => `<tr data-id="${r.container_id}" class="${r.container_id === selected ? 'sel' : ''}">
-    <td>${fmtTime(r.seen_at)}</td><td>${r.container_id}</td><td>${r.checkpoint}</td>
-    <td>${r.x.toFixed(0)}, ${r.y.toFixed(0)}</td><td>${r.z_tier}</td><td>${r.z_m}</td><td>${r.heading_deg.toFixed(0)}°</td></tr>`).join('');
-  if (html !== lastRows) {
-    lastRows = html; $('rows').innerHTML = html;
-    document.querySelectorAll('#rows tr').forEach(tr => tr.onclick = () => select(tr.dataset.id));
+// ================= zoom, labels, theme, light, CSV =================
+$('zIn').onclick = () => zoomBy(.7); $('zOut').onclick = () => zoomBy(1 / .7); $('zFit').onclick = () => setView('reset');
+$('zSel').onclick = () => { const c = detected(); if (c) focusBox(c.container_id); };
+function setTheme(v) {
+  themeName = v; document.documentElement.setAttribute('data-theme', v); $('theme').value = v; try { localStorage.setItem('yardTheme', v); } catch { }
+  applyScene();
+}
+$('theme').onchange = e => setTheme(e.target.value); $('lightR').oninput = applyScene;
+let saved = null; try { saved = localStorage.getItem('yardTheme'); } catch { }
+setTheme(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+const csv = r => r.map(a => a.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+const stamp = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+function dl(n, r) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv(r)], { type: 'text/csv' })); a.download = n; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 500); }
+function invCSV() {
+  dl(`yard_inventory_${stamp()}.csv`, [['container_id', 'area', 'zone', 'location', 'level', 'x_m', 'y_m', 'z_m', 'checkpoint', 'stored', 'last_seen']].concat(
+    view.map(c => { const p = pos(c); return [c.container_id, p.a, p.z, p.loc, c.z_tier, c.x, c.y, c.z_m, c.checkpoint, stored.has(c.container_id) ? 'yes' : 'no', c.seen_at || '']; })));
+}
+async function logCSV() {
+  let r = recent; try { r = await j('/sightings/recent?limit=1000'); } catch { }
+  dl(`yard_sightings_${stamp()}.csv`, [['time', 'container_id', 'place', 'level']].concat(r.map(x => [x.seen_at, x.container_id, x.checkpoint, x.z_tier])));
+}
+$('csvInv').onclick = invCSV; $('csvLog').onclick = logCSV;
+
+// ================= left menu pages, labels / wheel lock, find device =================
+const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+function nav(n) {
+  page = n; document.querySelectorAll('aside a[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === n));
+  const live = n === 'live'; $('vLive').style.display = live ? '' : 'none'; $('vOther').style.display = live ? 'none' : 'block'; if (!live) renderPage();
+}
+document.querySelectorAll('aside a[data-nav]').forEach(a => a.onclick = () => nav(a.dataset.nav));
+const locate = id => { selected = id; nav('live'); panel(); setTimeout(() => focusBox(id), 60); };
+function setLabels(on) { labels = on; cfg.labels = on; saveCfg(); $('lblBtn').textContent = '🏷 Labels: ' + (on ? 'on' : 'off'); $('lblBtn').classList.toggle('on', on); if (R) panel(); }
+function setLock(on) { cfg.lock = on; saveCfg(); $('lockBtn').textContent = on ? '🔒 Wheel zoom: locked' : '🔓 Wheel zoom: on'; $('lockBtn').classList.toggle('on', on); }
+$('lblBtn').onclick = () => setLabels(!labels); $('lockBtn').onclick = () => setLock(!cfg.lock);
+$('zDev').onclick = () => { if (dev) fly({ t: 0, p: .95, r: Math.max(10, defR() * .35), tx: dev.x, ty: 0, tz: -dev.y }); else $('status').textContent = 'no device position yet — press Play or Camera'; };
+function zoneCSV() {
+  dl(`yard_zones_${stamp()}.csv`, [['zone', 'x_min_m', 'x_max_m', 'y_min_m', 'y_max_m', 'z_height_m', 'segments', 'l1', 'l2', 'l3', 'l4', 'total']].concat((layout ? layout.zones : []).map(z => {
+    const b = zoneBox(z), l = [1, 2, 3, 4].map(k => view.filter(c => (c.checkpoint || '').startsWith(z.name + '/') && c.z_tier === k).length);
+    return [z.name, b.x0, b.x1, b.y0, b.y1, b.zH.toFixed(2), z.segments.length, ...l, l.reduce((a, b) => a + b, 0)]; })));
+}
+function rowsHTML(list) {
+  return list.map(c => { const p = pos(c); return `<tr data-id="${esc(c.container_id)}"><td><b>${esc(c.container_id)}</b></td><td>${esc(p.loc)}</td><td>${esc(p.a)}</td><td>${esc(p.z)}</td><td>L${c.z_tier}</td><td>${c.x.toFixed(2)}</td><td>${c.y.toFixed(2)}</td><td>${c.z_m}</td><td>${stored.has(c.container_id) ? 'Stored ✓' : 'In yard'}</td><td><button class="ghost" data-loc="${esc(c.container_id)}">Locate</button></td></tr>`; }).join('') || '<tr><td colspan="10">No containers match.</td></tr>';
+}
+function fillRows() {
+  const tb = $('pRows'); if (!tb) return; const q = ($('pf').value || '').trim().toLowerCase(), zf = $('pz') ? $('pz').value : '', lf = $('pl') ? $('pl').value : '';
+  const list = view.filter(c => { const p = pos(c); return (!q || (c.container_id + ' ' + p.loc + ' ' + (c.checkpoint || '')).toLowerCase().includes(q)) && (!zf || (c.checkpoint || '').startsWith(zf + '/')) && (!lf || String(c.z_tier) === lf); })
+    .sort((a, b) => pos(a).loc.localeCompare(pos(b).loc, undefined, { numeric: true }) || b.z_tier - a.z_tier);
+  tb.innerHTML = rowsHTML(list); $('pCnt').textContent = list.length + ' container(s)';
+  tb.querySelectorAll('[data-loc]').forEach(b => b.onclick = ev => { ev.stopPropagation(); locate(b.dataset.loc); }); tb.querySelectorAll('tr[data-id]').forEach(r => r.onclick = () => locate(r.dataset.id));
+}
+function renderPage() {
+  const o = $('vOther'), zs = layout ? layout.zones : [];
+  const tbl = '<div style="overflow-x:auto"><table><thead><tr><th>Container</th><th>Location</th><th>Area</th><th>Zone</th><th>Level</th><th>X (m)</th><th>Y (m)</th><th>Z (m)</th><th>Status</th><th></th></tr></thead><tbody id="pRows"></tbody></table></div>';
+  if (page === 'inv') {
+    o.innerHTML = `<div class="pg"><section class="panel"><h2>▤ Inventory <span class="badge" id="pCnt"></span><button class="ghost" id="pCsv">⬇ CSV</button></h2><div class="pgrow"><input id="pf" placeholder="Filter by ID / location…" style="flex:1"></div>${tbl}</section></div>`;
+    $('pf').oninput = fillRows; $('pCsv').onclick = invCSV; fillRows();
+  } else if (page === 'search') {
+    o.innerHTML = `<div class="pg"><section class="panel"><h2>⌕ Container search <span class="badge" id="pCnt"></span></h2><div class="pgrow"><input id="pf" placeholder="Container ID or location, e.g. S43GLN or A2-3" style="flex:1;min-width:240px" value="${esc($('q').value)}"><select id="pz"><option value="">All zones</option>${zs.map(z => `<option>${esc(z.name)}</option>`).join('')}</select><select id="pl"><option value="">All levels</option>${[1, 2, 3, 4].map(l => `<option value="${l}">L${l}</option>`).join('')}</select></div>${tbl}</section></div>`;
+    ['pf', 'pz', 'pl'].forEach(i => $(i).oninput = $(i).onchange = fillRows); fillRows(); $('pf').focus();
+  } else if (page === 'ops') {
+    const per = zs.map(z => { const bx = zoneBox(z), l = [1, 2, 3, 4].map(k => view.filter(c => (c.checkpoint || '').startsWith(z.name + '/') && c.z_tier === k).length);
+      return `<tr><td><b>${esc(z.name)}</b></td><td>${rg(bx.x0, bx.x1)}</td><td>${rg(bx.y0, bx.y1)}</td><td>0–${bx.zH.toFixed(1)}</td><td>${z.segments.length}</td>${l.map(n => `<td>${n}</td>`).join('')}<td><b>${l.reduce((a, b) => a + b, 0)}</b></td><td><button class="ghost" data-z="${esc(z.name)}">⌕ Zoom</button></td></tr>`; }).join('');
+    o.innerHTML = `<div class="pg"><div class="cards"><div>Containers<b>${view.length}</b></div><div>Stored<b>${view.filter(c => stored.has(c.container_id)).length}</b></div><div>In view now<b>${ls.in_view || 0}</b></div><div>Video status<b style="font-size:18px">${esc(ls.status || 'idle')}</b></div><div>Frame<b>${ls.frame || '—'}</b></div></div>
+    <section class="panel"><h2>▦ Zones</h2><div style="overflow-x:auto"><table><thead><tr><th>Zone</th><th>X (m)</th><th>Y (m)</th><th>Z (m)</th><th>Segments</th><th>L1</th><th>L2</th><th>L3</th><th>L4</th><th>Total</th><th></th></tr></thead><tbody>${per}</tbody></table></div></section>
+    <section class="panel"><h2>Recent sightings</h2><div style="overflow-x:auto"><table><thead><tr><th>Time</th><th>Container</th><th>Place</th><th>Tier</th></tr></thead><tbody>${recent.map(r => `<tr><td>${fmtTime(r.seen_at)}</td><td><b>${esc(r.container_id)}</b></td><td>${esc(r.checkpoint)}</td><td>${r.z_tier}</td></tr>`).join('')}</tbody></table></div></section></div>`;
+    o.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { nav('live'); setTimeout(() => zoomZone(b.dataset.z), 60); });
+  } else if (page === 'rep') {
+    o.innerHTML = `<div class="pg"><section class="panel"><h2>▥ Reports</h2><div class="cards"><div>Containers<b>${view.length}</b></div><div>Zones<b>${zs.length}</b></div><div>Sightings loaded<b>${recent.length}</b></div></div><div class="pgrow"><button id="r1">⬇ Inventory CSV</button><button id="r2">⬇ Sightings CSV</button><button id="r3">⬇ Zone summary CSV</button><button class="ghost" id="r4">🖨 Print this page</button></div><div class="msg">Inventory = every container with area, zone, level and x / y / z. Zone summary = size of each zone and containers per level.</div></section></div>`;
+    $('r1').onclick = invCSV; $('r2').onclick = logCSV; $('r3').onclick = zoneCSV; $('r4').onclick = () => window.print();
+  } else if (page === 'users') {
+    o.innerHTML = `<div class="pg"><section class="panel"><h2>☺ Users &amp; roles</h2><table><thead><tr><th>User</th><th>Role</th><th>Status</th></tr></thead><tbody><tr><td><b>Yograj Rundhanker</b></td><td>Administrator</td><td>Signed in</td></tr></tbody></table><div class="msg"><b>Administrator</b> – everything incl. settings and clear map · <b>Operator</b> – identify, confirm, mark stored · <b>Viewer</b> – read-only. This page shows the signed-in user only; adding other accounts needs a login endpoint in your backend.</div></section></div>`;
+  } else if (page === 'set') {
+    o.innerHTML = `<div class="pg"><section class="panel"><h2>⚙ Settings</h2><div class="frm">
+      <span>Mode</span><select id="sTheme"><option value="light">Light</option><option value="dark">Dark</option><option value="contrast">High contrast</option></select>
+      <span>Scene light</span><input type="range" id="sLight" min="30" max="160">
+      <span>Container labels</span><select id="sLbl"><option value="1">On</option><option value="0">Off</option></select>
+      <span>Label size</span><select id="sPx"><option value="16">Small</option><option value="22">Medium</option><option value="30">Large</option></select>
+      <span>Mouse-wheel zoom</span><select id="sLock"><option value="0">On</option><option value="1">Locked (use + / − buttons)</option></select>
+      <span>Blue device dot</span><select id="sDot"><option value="1">Show</option><option value="0">Hide</option></select>
+      <span>Walked path (red dots)</span><select id="sTrail"><option value="1">Show</option><option value="0">Hide</option></select>
+      <span>Follow device</span><select id="sFol"><option value="0">Off</option><option value="1">On</option></select>
+      <span>Release selection when it leaves view (live)</span><select id="sAuto"><option value="1">On</option><option value="0">Off</option></select>
+      <span>Performance</span><select id="sPerf"><option value="low">Low (slow laptop)</option><option value="balanced">Balanced</option><option value="high">High (smooth, needs GPU)</option></select>
+      <span>Refresh every</span><select id="sRate"><option value="1">1 s</option><option value="2">2 s</option><option value="5">5 s</option></select></div></section></div>`;
+    const g = (id, v, fn) => { $(id).value = v; $(id).onchange = $(id).oninput = () => { fn($(id).value); saveCfg(); }; };
+    g('sTheme', themeName, setTheme); g('sLight', $('lightR').value, v => { $('lightR').value = v; applyScene(); }); g('sLbl', labels ? 1 : 0, v => setLabels(v === '1')); g('sPx', cfg.labelPx, v => cfg.labelPx = +v);
+    g('sLock', cfg.lock ? 1 : 0, v => setLock(v === '1')); g('sDot', cfg.dot ? 1 : 0, v => cfg.dot = v === '1'); g('sTrail', cfg.trail ? 1 : 0, v => cfg.trail = v === '1'); g('sFol', cfg.follow ? 1 : 0, v => cfg.follow = v === '1'); g('sAuto', cfg.autoRelease ? 1 : 0, v => cfg.autoRelease = v === '1'); g('sRate', cfg.rate, v => cfg.rate = +v); g('sPerf', cfg.perf, setPerf);
   }
-  $('sTotal').textContent = containers.length;
-  $('sAmb').textContent = containers.filter(c => c.heading_ambiguous).length;
-  $('sLast').textContent = recent[0] ? fmtTime(recent[0].seen_at) : '–';
-  draw();
 }
+function applyPerf() { if (!R) return; const d = devicePixelRatio || 1; R.setPixelRatio(cfg.perf === 'low' ? 1 : cfg.perf === 'balanced' ? Math.min(1.5, d) : Math.min(2, d)); const el = $('gl'); if (el.clientWidth) R.setSize(el.clientWidth, el.clientHeight); }
+function setPerf(v) { cfg.perf = v; saveCfg(); $('perfBtn').textContent = '⚡ Performance: ' + v; applyPerf(); if (R && v === 'high') $('status').textContent = 'reload the page once to turn on anti-aliasing'; }
+$('perfBtn').onclick = () => setPerf({ low: 'balanced', balanced: 'high', high: 'low' }[cfg.perf]);
+setLock(cfg.lock); setLabels(labels); $('perfBtn').textContent = '⚡ Performance: ' + cfg.perf;
 
-// ---------- smooth movement ----------
-const anim = new Map(); let liveView = null, viewShown = null;
-function setTargets(list) {
-  const seen = new Set();
-  list.forEach(c => {
-    seen.add(c.container_id);
-    let a = anim.get(c.container_id);
-    if (!a) { a = { x: c.x, y: c.y, alpha: 0, gone: false }; anim.set(c.container_id, a); }
-    a.c = c; a.tx = c.x; a.ty = c.y; a.gone = false;
-  });
-  anim.forEach((a, id) => { if (!seen.has(id)) a.gone = true; });
-}
-function shown() { return [...anim.values()].map(a => ({ ...a.c, x: a.x, y: a.y, gx: a.tx, gy: a.ty, alpha: a.alpha })); }
-function stepAnim() {
-  let moving = false;
-  anim.forEach((a, id) => {
-    if (Math.abs(a.tx - a.x) > .004 || Math.abs(a.ty - a.y) > .004) { a.x += (a.tx - a.x) * .22; a.y += (a.ty - a.y) * .22; moving = true; }
-    else { a.x = a.tx; a.y = a.ty; }
-    const ta = a.gone ? 0 : 1;
-    if (Math.abs(ta - a.alpha) > .02) { a.alpha += (ta - a.alpha) * .2; moving = true; }
-    else { a.alpha = ta; if (a.gone) anim.delete(id); }
-  });
-  if (liveView) {
-    if (!viewShown || viewShown.length !== liveView.length) { viewShown = liveView.map(p => p.slice()); moving = true; }
-    else liveView.forEach((p, i) => { const q = viewShown[i];
-      if (Math.abs(p[0] - q[0]) > .004 || Math.abs(p[1] - q[1]) > .004) { q[0] += (p[0] - q[0]) * .25; q[1] += (p[1] - q[1]) * .25; moving = true; } });
-  } else if (viewShown) { viewShown = null; moving = true; }
-  if (moving) draw();
-  requestAnimationFrame(stepAnim);
-}
-
-// ---------- polling: the live state is fetched often, the database lists rarely ----------
-let liveActive = false, busyDb = false, busyLive = false, lastSession = null, liveOn = false;
-function tick() { tickDb(); tickLive(); }
-async function tickDb() {
-  if (busyDb) return; busyDb = true;
-  try {
-    recent = await j('/sightings/recent?limit=30');
-    if (!liveActive) {
-      containers = await j('/containers'); setTargets(containers);
-      if (!layout) { yard = Math.max(100, Math.ceil(Math.max(0, ...containers.map(c => Math.max(c.x, c.y))) / 50) * 50); yardW = yardH = yard; fit(); }
-    }
-    if (selected) path = await j(`/containers/${selected}/history`);
-    $('dot').className = 'dot on'; $('status').textContent = liveOn ? 'live · following the video' : 'live · updating every 2 s';
-    render();
-  } catch { $('dot').className = 'dot'; $('status').textContent = 'disconnected — retrying'; }
-  busyDb = false;
-}
-async function tickLive() {
-  if (!layout || busyLive) return; busyLive = true;
-  try {
-    const ls = await j('/live/state');
-    showLive(ls);
-    if (ls.status !== 'idle') {
-      liveActive = true; containers = ls.containers; liveView = ls.view || null; setTargets(containers);
-      $('lvTags').innerHTML = containers.map(c => `<span class="chip ${c.in_view ? 'on' : ''}">${c.container_id}</span>`).join('');
-      $('sTotal').textContent = containers.length; $('sAmb').textContent = containers.filter(c => c.heading_ambiguous).length;
-    } else if (liveActive) { liveActive = false; liveView = null; $('lvTags').innerHTML = ''; tickDb(); }
-  } catch { /* the next poll retries */ }
-  busyLive = false;
-}
-function setVideo() {
-  const im = $('liveImg');
-  im.onload = () => { im.style.display = ''; $('liveEmpty').style.display = 'none'; };
-  im.src = '/live/video?t=' + Date.now();
-}
-function showLive(ls) {
-  liveOn = ls.status === 'running';
-  if (!layout) return;
-  if (ls.status === 'idle') { lastSession = null; return; }
-  if (ls.session !== lastSession) { lastSession = ls.session; setVideo(); }       // a new video / camera: reconnect the picture once
-  $('lvBar').style.width = ((ls.progress || 0) * 100) + '%';
-  $('lvMsg').textContent = ({ error: 'Error: ' }[ls.status] || '') + (ls.message || ls.status);
+// ================= live controls =================
+function setVideo() { imgOn = true; const im = $('liveImg'); im.onload = () => { im.style.display = ''; $('liveEmpty').style.display = 'none'; }; im.src = '/live/video?t=' + Date.now(); }
+function showLive(l) {
+  if (!layout) return; if (l.status !== 'idle' && !imgOn) setVideo();
+  $('lvBar').style.width = ((l.progress || 0) * 100) + '%';
+  if (l.status !== 'idle') $('lvMsg').textContent = ({ error: 'Error: ' }[l.status] || '') + (l.message || l.status) + (l.status === 'running' ? ` · ${l.in_view} in view, ${l.containers.length} on map` : '');
 }
 async function liveCall(url, opt) {
   $('lvMsg').textContent = 'Starting…';
-  try {
-    const r = await fetch(url, opt);
-    if (!r.ok) { $('lvMsg').textContent = (await r.json().catch(() => ({}))).detail || 'Request failed'; return; }
-    tick();
-  } catch { $('lvMsg').textContent = 'Request failed.'; }
+  try { const r = await fetch(url, opt); if (!r.ok) { $('lvMsg').textContent = (await r.json().catch(() => ({}))).detail || 'Request failed'; return; } setVideo(); tick(); }
+  catch { $('lvMsg').textContent = 'Request failed.'; }
 }
-$('lvPlay').onclick = () => {
-  const f = $('lvFile').files[0]; if (!f) { $('lvMsg').textContent = 'Choose a video file first.'; return; }
-  const x = new XMLHttpRequest();
-  x.open('POST', '/live/upload?name=' + encodeURIComponent(f.name));
-  x.setRequestHeader('Content-Type', 'application/octet-stream');
-  x.upload.onprogress = e => { if (e.lengthComputable) { $('lvBar').style.width = (e.loaded / e.total * 100) + '%'; $('lvMsg').textContent = `Uploading… ${Math.round(e.loaded / e.total * 100)} %`; } };
-  x.onload = () => {
-    if (x.status >= 200 && x.status < 300) { $('lvMsg').textContent = 'Starting…'; tick(); }
-    else { try { $('lvMsg').textContent = JSON.parse(x.responseText).detail || 'Upload failed.'; } catch { $('lvMsg').textContent = 'Upload failed.'; } }
-  };
-  x.onerror = () => { $('lvMsg').textContent = 'Upload failed.'; };
-  $('lvMsg').textContent = 'Uploading… 0 %'; x.send(f);
-};
+$('lvPlay').onclick = () => { const f = $('lvFile').files[0]; if (!f) { $('lvMsg').textContent = 'Choose a video file first.'; return; }
+  $('lvMsg').textContent = 'Uploading…'; liveCall('/live/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' } }); };
 $('lvStart').onclick = () => { const v = $('lvCam').value.trim(); if (v) liveCall('/live/start?source=' + encodeURIComponent(v), { method: 'POST' }); };
 $('lvStop').onclick = () => liveCall('/live/stop', { method: 'POST' });
 $('lvClear').onclick = async () => {
-  await fetch('/reset', { method: 'POST' }).catch(() => {});
-  lastSession = null; $('liveImg').removeAttribute('src'); $('liveImg').style.display = 'none'; $('liveEmpty').style.display = '';
-  selected = null; path = []; $('lvMsg').textContent = 'Map cleared.'; tick();
+  await fetch('/reset', { method: 'POST' }).catch(() => { });
+  imgOn = false; $('liveImg').style.display = 'none'; $('liveEmpty').style.display = ''; selected = null; dev = tgt = null; trail = []; $('lvMsg').textContent = 'Map cleared.'; tick();
 };
-
 async function poll(id) {
-  const o = await j('/jobs/' + id);
-  $('upBar').style.width = (o.progress * 100) + '%'; $('upMsg').textContent = o.message;
+  const o = await j('/jobs/' + id); $('upBar').style.width = (o.progress * 100) + '%'; $('upMsg').textContent = o.message;
   if (o.status === 'running') return setTimeout(() => poll(id), 1000);
-  $('upBtn').disabled = false;
-  if (o.status === 'error') return;
-  $('upMsg').textContent = `Done: ${o.rows.length} box(es) placed` + (o.unassigned ? `, ${o.unassigned} outside the layout (ignored)` : '') + '.';
-  $('upRows').innerHTML = Object.entries(o.summary).map(([k, s]) =>
-    `<tr><td>${k}</td><td>${s.count}</td><td>${s.max_tier}</td><td>${(s.max_tier * 2.59).toFixed(1)}</td></tr>`).join('');
-  $('upTbl').style.display = '';
-  if (o.preview) { $('upPrev').src = `/jobs/${id}/preview`; $('upPrev').style.display = ''; }
-  tick();
+  $('upBtn').disabled = false; if (o.status === 'error') return;
+  $('upMsg').textContent = `Done: ${o.rows.length} box(es) placed` + (o.unassigned ? `, ${o.unassigned} outside the layout` : '') + '.';
+  $('upRows').innerHTML = Object.entries(o.summary).map(([k, v]) => `<tr><td>${k}</td><td>${v.count}</td><td>${v.max_tier}</td><td>${(v.max_tier * 2.59).toFixed(1)}</td></tr>`).join('');
+  $('upTbl').style.display = ''; if (o.preview) { $('upPrev').src = `/jobs/${id}/preview`; $('upPrev').style.display = ''; } tick();
 }
 $('upBtn').onclick = async () => {
-  const f = $('upFile').files[0]; if (!f) return;
-  $('upBtn').disabled = true; $('upMsg').textContent = 'Uploading…'; $('upBar').style.width = '0';
-  try {
-    const r = await fetch('/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' } });
-    poll((await r.json()).id);
-  } catch { $('upMsg').textContent = 'Upload failed.'; $('upBtn').disabled = false; }
+  const f = $('upFile').files[0]; if (!f) return; $('upBtn').disabled = true; $('upMsg').textContent = 'Uploading…'; $('upBar').style.width = '0';
+  try { const r = await fetch('/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' } }); poll((await r.json()).id); }
+  catch { $('upMsg').textContent = 'Upload failed.'; $('upBtn').disabled = false; }
 };
 
 (async () => {
   try {
     layout = await j('/layout'); $('upPanel').style.display = ''; $('livePanel').style.display = ''; $('camPanel').style.display = 'none';
-    yardW = layout.width_m; yardH = layout.height_m; [boxW, boxH] = layout.box_m;
-    $('mapTitle').textContent = layout.name + ' (metres)'; fit();
-  } catch { /* no layout: normal yard grid */ }
-  tick(); setInterval(tickDb, 2000); setInterval(tickLive, 600); requestAnimationFrame(stepAnim);
+    W = layout.width_m; H = layout.height_m; [boxW, boxH] = layout.box_m; th = boxH * 1.1; wh = 2.4; fh = 1.1; $('mapTitle').textContent = layout.name;
+    $('zoneBtns').innerHTML = layout.zones.map(z => `<button class="ghost" data-zone="${z.name}" title="Zoom to ${z.name} — X ${rg(zoneBox(z).x0, zoneBox(z).x1)} · Y ${rg(zoneBox(z).y0, zoneBox(z).y1)} m">⌕ ${z.name}</button>`).join('');
+    document.querySelectorAll('[data-zone]').forEach(b => b.onclick = () => zoomZone(b.dataset.zone));
+  } catch { $('mapTitle').textContent = 'Yard map (metres)'; $('stk').style.display = 'none'; th = 3; }
+  init3d(); (function lp() { tick().finally(() => setTimeout(lp, Math.max(cfg.rate, cfg.perf === 'low' ? 3 : 1) * 1000)); })();
 })();
-
-// video: show the stream only if the server has a source
-const img = new Image();
-img.onload = () => { $('videoBox').innerHTML = ''; $('videoBox').appendChild(img); };
-img.src = '/video';
+const img = new Image(); img.onload = () => { $('videoBox').innerHTML = ''; $('videoBox').appendChild(img); }; img.src = '/video';
 </script>
 </body>
 </html>

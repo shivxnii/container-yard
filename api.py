@@ -4,7 +4,7 @@ Room mode, no env source:  ROOM_MODE=1 uvicorn api:app    (start a video / camer
 import json, os, threading, time, uuid
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 import db, feed
 import live_session as live
 import geometry as geo
@@ -189,6 +189,15 @@ def reset():
 @app.get("/live/state")
 def live_state():
     return live.state()
+
+
+@app.get("/live/crop/{tag}")
+def live_crop(tag: str):
+    """Picture of one tag / container cut out of the newest live frame."""
+    jpg = live.crop(tag)
+    if jpg is None:
+        raise HTTPException(404, "Not in the picture right now")
+    return Response(jpg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/live/video")
