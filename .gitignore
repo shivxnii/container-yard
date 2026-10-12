@@ -9,3 +9,15 @@ uploads/
 live_session_*backup*.py
 live_session_broken*.py
 live_session_bad.py
+container-yard-backup/
+.venv/
+__pycache__/
+.pytest_cache/
+containers.db
+uploads/
+*.MOV
+*.mov
+*.mp4
+live_session_*backup*.py
+live_session_broken*.py
+live_session_bad.py
