@@ -56,6 +56,17 @@ tr.sel td{background:var(--gl)}tbody tr{cursor:pointer}.tw{max-height:170px;over
 .other table{font-size:13px}.other th,.other td{padding:7px 8px}.other tbody tr:hover td{background:var(--gl)}.other tbody tr[data-id]{cursor:pointer}
 .frm{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px 14px;align-items:center;max-width:620px;font-weight:600}
 @media(max-width:1000px){html,body{height:auto}.app{height:auto;grid-template-columns:1fr}aside{display:none}main{grid-template-columns:1fr}.mapwrap{min-height:420px}.col{overflow:visible}}
+.aimbig{display:flex;align-items:baseline;gap:8px;margin:2px 0 8px}.aimbig b{font-size:34px;font-weight:900;color:var(--g);font-variant-numeric:tabular-nums;line-height:1}.aimbig span{color:var(--mute);font-weight:700}
+.video img{cursor:crosshair}
+.vtag{position:absolute;pointer-events:none;background:rgba(13,27,42,.88);color:#fff;border:1.5px solid #2bbee8;border-radius:8px;padding:2px 8px;font-weight:800;font-size:12px;white-space:nowrap;transform:translate(-50%,0);z-index:2}
+#aimTag{left:50%;top:6px;display:none}#aimTip{display:none;border-color:#ffc400}
+#pinMark{display:none;padding:0;width:16px;height:16px;border-radius:50%;border:2.5px solid #ff2d95;background:rgba(255,45,149,.3);transform:translate(-50%,-50%);transition:left .3s,top .3s}
+#pinMark span{position:absolute;left:18px;top:-7px;background:#ff2d95;color:#fff;border-radius:6px;padding:0 6px;font-size:11px;font-weight:800}
+/* v1.7: always-on dimensions overlay (HTML, so it stays readable from every view angle) */
+.hud{position:absolute;right:10px;top:10px;max-width:310px;background:var(--pn);border:1.5px solid var(--line);border-radius:10px;padding:6px 9px;font-size:11px;line-height:1.4;pointer-events:none;opacity:.96;z-index:3}
+.hud b{font-weight:800}.hud small{color:var(--mute)}.hud .hz{border-top:1px solid var(--line);padding:3px 0}
+.hud .on{background:var(--gl);border-radius:4px;color:var(--g)}
+.hud .lvs{display:flex;gap:4px;flex-wrap:wrap;margin:3px 0}.hud .lvs span{border:1px solid var(--line);border-radius:6px;padding:0 5px;font-weight:700}
 </style>
 </head>
 <body>
@@ -63,7 +74,7 @@ tr.sel td{background:var(--gl)}tbody tr{cursor:pointer}.tw{max-height:170px;over
 <aside>
   <div class="logo">RYM<small>GRENERGY</small></div>
   <a class="on" data-nav="live">▦ Live View</a><a data-nav="ops">◧ Operations</a><a data-nav="inv">▤ Inventory</a><a data-nav="search">⌕ Container Search</a><a data-nav="rep">▥ Reports</a><a data-nav="users">☺ Users &amp; Roles</a><a data-nav="set">⚙ Settings</a>
-  <div class="sys">System Status<br><b>● Online</b><br>v1.5.2</div>
+  <div class="sys">System Status<br><b>● Online</b><br>v1.7.0</div>
 </aside>
 <div class="right">
 <header>
@@ -83,22 +94,31 @@ tr.sel td{background:var(--gl)}tbody tr{cursor:pointer}.tw{max-height:170px;over
       <button class="ghost" id="zIn" title="Zoom in">＋</button><button class="ghost" id="zOut" title="Zoom out">－</button><button class="ghost" id="zFit">⤢ Fit all</button>
       <span id="zoneBtns" style="display:contents"></span>
       <button class="ghost" id="zSel">◎ Focus selected</button><button class="ghost" id="zDev">📍 Find device</button>
-      <button class="ghost on" id="lblBtn">🏷 Labels: on</button><button class="ghost" id="lockBtn">🔓 Wheel zoom: on</button><button class="ghost" id="perfBtn">⚡ Performance: balanced</button>
+      <button class="ghost on" id="dimBtn">📐 Dimensions: on</button><button class="ghost on" id="lblBtn">🏷 Labels: on</button><button class="ghost" id="lockBtn">🔓 Wheel zoom: on</button><button class="ghost" id="perfBtn">⚡ Performance: balanced</button>
       <span class="sp"></span>
       <button class="ghost" id="csvInv">⬇ Inventory CSV</button><button class="ghost" id="csvLog">⬇ Sightings CSV</button>
     </div>
-    <div class="mapwrap"><div id="gl"></div><div class="leg">Drag = rotate · right-drag = pan · wheel = zoom · double-click = reset · click a container to select · every container shows its own code (L1 = bottom)</div></div>
+    <div class="mapwrap"><div id="gl"></div><div class="hud" id="dimHud" style="display:none"></div><div class="leg">Drag = rotate · right-drag = pan · wheel = zoom · double-click = reset · click a container to select · every container shows its own code (L1 = bottom) · amber marker = height at the pointer</div></div>
   </section>
 
   <div class="col">
     <section class="panel" id="livePanel" style="display:none">
       <h2>▶ Video feed <small style="font-weight:400;color:var(--mute);text-transform:none">(Handheld camera)</small><span class="r" id="liveTag"></span></h2>
-      <div class="video" id="vbox"><img id="liveImg" style="display:none" alt="video"><span id="liveEmpty">Play a video or start a camera</span><button class="fs ghost" id="fs">⛶</button></div>
+      <div class="video" id="vbox"><img id="liveImg" style="display:none" alt="video"><span id="liveEmpty">Play a video or start a camera</span><button class="fs ghost" id="fs">⛶</button>
+        <div class="vtag" id="aimTag"></div><div class="vtag" id="aimTip"></div><div class="vtag" id="pinMark"><span id="pinTxt"></span></div></div>
       <div class="bar"><i id="lvBar"></i></div>
       <div class="tiles"><div><span>Status</span><b id="sStat">idle</b></div><div><span>Frame</span><b id="sFrame">—</b></div><div><span>In view</span><b id="sView">0</b></div><div><span>On map</span><b id="sMap">0</b></div></div>
       <div class="msg" id="lvMsg">Choose a video or start a camera.</div>
       <div class="row"><label class="btn ghost grow" for="lvFile" id="lvName">📁 Choose video…</label><input type="file" id="lvFile" accept="video/*" hidden><button id="lvPlay">▶ Play</button></div>
       <div class="row"><input id="lvCam" value="0" title="camera index or rtsp:// URL"><button id="lvStart">● Camera</button><button class="ghost" id="lvStop">■ Stop</button><button class="ghost" id="lvClear">Clear map</button></div>
+    </section>
+    <section class="panel" id="aimPanel" style="display:none">
+      <h2>⌖ Pointer height <span class="badge off" id="aimBadge">no pointer</span></h2>
+      <div class="aimbig"><b id="aimH">—</b><span>m above ground</span></div>
+      <div class="tiles three"><div><span>Level at pointer</span><b id="aimL">—</b></div><div><span>Nearest container</span><b id="aimId">—</b></div><div><span>Stack top</span><b id="aimTop">—</b></div></div>
+      <div class="tiles" style="grid-template-columns:1fr 1fr;margin-top:6px"><div><span>📌 Pinned point</span><b id="pinH">—</b></div><div><span>Pointer − pin</span><b id="pinD">—</b></div></div>
+      <div class="msg" id="aimMsg">Cross-hair in the video = pointer. Hover the video to read any spot, click to pin it.</div>
+      <div class="row"><button class="ghost" id="pinClr">Clear pin</button><button class="ghost" id="aimCsv">⬇ Pointer log CSV</button></div>
     </section>
     <section class="panel" id="camPanel"><h2>Live camera</h2><div class="video" id="videoBox">No live video source</div></section>
 
@@ -106,7 +126,7 @@ tr.sel td{background:var(--gl)}tbody tr{cursor:pointer}.tw{max-height:170px;over
       <h2>◆ Current handling <span class="badge off" id="hBadge">No target</span></h2>
       <dl><dt>Container ID</dt><dd id="hId">—</dd><dt>Location</dt><dd id="hLoc">—</dd><dt>Area</dt><dd id="hArea">—</dd><dt>Zone</dt><dd id="hZone">—</dd>
         <dt class="hl">Level</dt><dd class="hl" id="hLvl">—</dd><dt>GPS (Lat ; Long)</dt><dd id="hGps">— (no GPS data)</dd>
-        <dt>X (m)</dt><dd id="hX">—</dd><dt>Y (m)</dt><dd id="hY">—</dd><dt>Z (m)</dt><dd id="hZ">—</dd></dl>
+        <dt>Pointer height (m)</dt><dd id="hAim">—</dd><dt>X (m)</dt><dd id="hX">—</dd><dt>Y (m)</dt><dd id="hY">—</dd><dt>Z (m)</dt><dd id="hZ">—</dd></dl>
       <div id="stackList"></div>
       <div class="btns"><button id="bId">◎ Identify / Confirm</button><button class="ghost" id="bStore">⚑ Mark as Stored</button></div>
     </section>
@@ -144,17 +164,25 @@ const PAL = ['#c0392b', '#2e6fa3', '#2f8f6b', '#d98a1f', '#7a4fa3', '#3b86a8', '
 let layout = null, W = 100, H = 100, boxW = 12, boxH = 2.6, th = 3, wh = 0, fh = 0;
 let raw = [], view = [], recent = [], selected = null, ls = { status: 'idle' }, liveOn = false, imgOn = false, stored = new Set(), stackMode = true;
 let dev = null, tgt = null, trail = [], dir = [0, 1], lastStatus = 'idle', lastSig = '', labels = true, goal = null, themeName = 'light', dragging = false, trailPts, sp, halo, pole, capS, devLbl, dcv, dtex, lastDevTxt = '', page = 'live';
+let G = null, fastAim = null, aimInfo = null, aimT = null, aimS = null, pin = null, pinInfo = null, pinT = null, aimLog = [], lastLogKey = '', lastLogT = 0, gAimM, gPinM, focusWin, lastAimId = '';   // v1.6 pointer height
 let hasHeading = false, lastRows = '', lastStack = '';   // v1.5.1: backend heading flag + panel change-detection caches
+let lastDev = null, lastAimInfo = null, lastDims = '';    // v1.7: last-known camera / pointer so the numbers never disappear
 const LV = 2.59, MAXL = 4;
 // v1.5.1: default refresh 2 s, auto-release of the selected container while live
-const cfg = Object.assign({ perf: 'balanced', labelPx: 22, rate: 2, trail: true, dot: true, lock: false, follow: false, labels: true, autoRelease: true }, (() => { try { return JSON.parse(localStorage.getItem('yardCfg') || '{}'); } catch { return {}; } })());
+// v1.7: entry door defaults to the RIGHT side of the front wall; dims = always-on dimensions overlay
+const cfg = Object.assign({ perf: 'balanced', labelPx: 22, rate: 2, trail: true, dot: true, lock: false, follow: false, labels: true, autoRelease: true, fov: 60, entry: 'right', dims: true }, (() => { try { return JSON.parse(localStorage.getItem('yardCfg') || '{}'); } catch { return {}; } })());
 const saveCfg = () => { try { localStorage.setItem('yardCfg', JSON.stringify(cfg)); } catch { } };
 labels = cfg.labels !== false;
+// v1.7: door position along the front wall (x, metres), complete walked path length, camera kept inside the room
+const doorW = 1.6, TRAIL_MAX = 3000;
+const doorX = () => !layout ? W / 2 : cfg.entry === 'left' ? doorW / 2 + .4 : cfg.entry === 'center' ? W / 2 : W - doorW / 2 - .4;
+const clampX = x => layout ? Math.min(W - .2, Math.max(.2, x)) : x;
 const fmtTime = iso => iso ? new Date(iso + (iso.endsWith('Z') || iso.includes('+') ? '' : 'Z')).toLocaleTimeString() : '–';
 const colOf = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PAL[h % PAL.length]; };
 const zoneOf = p => layout && layout.zones.find(z => p.x >= z.x && p.x < z.x + z.w);
 const levelOf = z => Math.min(4, Math.max(1, Math.ceil((z || 0) / 2.59)));
 const zoneBox = z => { const ys = z.segments.length ? z.segments : [{ y: 0, h: H }]; return { x0: z.x, x1: z.x + z.w, y0: Math.min(...ys.map(g => g.y)), y1: Math.max(...ys.map(g => g.y + g.h)), zH: MAXL * LV }; };
+const zS = m => layout ? m * th / LV : m;
 const rg = (a, b) => `${a.toFixed(1)}–${b.toFixed(1)}`;
 async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
 
@@ -204,10 +232,17 @@ function buildRoom() {
   wall(W + .4, wh, .2, W / 2, wh / 2, -H - .1, 0xf1f4f7, p => p.z < -H);
   wall(.2, wh, H + .4, -.1, wh / 2, -H / 2, 0xe5eaef, p => p.x < 0);
   wall(.2, wh, H + .4, W + .1, wh / 2, -H / 2, 0xe5eaef, p => p.x > W);
-  const dw = 1.6, dh = .95, fl = (W - dw) / 2;
-  wall(fl + .2, fh, .2, fl / 2 - .1, fh / 2, .1, 0xdfe4e9); wall(fl + .2, fh, .2, W - fl / 2 + .1, fh / 2, .1, 0xdfe4e9); wall(dw, fh - dh, .2, W / 2, dh + (fh - dh) / 2, .1, 0xdfe4e9);
-  const gl = new T.Mesh(new T.PlaneGeometry(dw, dh), new T.MeshBasicMaterial({ color: 0x9fd3e6, transparent: true, opacity: .6, side: T.DoubleSide })); gl.position.set(W / 2, dh / 2, .12); gRoom.add(gl);
-  const en = sprite('ENTRY', '#0f8a5f', '#fff', 26); en.position.set(W / 2, fh + .3, .1); gRoom.add(en);
+  // v1.7: the entry door sits on the side chosen in cfg.entry (default: right) instead of always in the middle
+  const dw = doorW, dh = .95, dX = doorX(), a0 = dX - dw / 2, a1 = W - (dX + dw / 2);
+  if (a0 > .01) wall(a0 + .2, fh, .2, a0 / 2 - .1, fh / 2, .1, 0xdfe4e9);
+  if (a1 > .01) wall(a1 + .2, fh, .2, W - a1 / 2 + .1, fh / 2, .1, 0xdfe4e9);
+  wall(dw, fh - dh, .2, dX, dh + (fh - dh) / 2, .1, 0xdfe4e9);
+  const gl = new T.Mesh(new T.PlaneGeometry(dw, dh), new T.MeshBasicMaterial({ color: 0x9fd3e6, transparent: true, opacity: .6, side: T.DoubleSide })); gl.position.set(dX, dh / 2, .12); gRoom.add(gl);
+  const en = sprite('ENTRY', '#0f8a5f', '#fff', 26); en.position.set(dX, fh + .3, .1); gRoom.add(en);
+  // v1.7: permanent dimension labels (room size + level ruler) - part of the room, so they never depend on the camera or the pointer
+  const ds = (t, x, y, z, k = .9) => { const q = sprite(t, '#0d1b2a', '#fff', 22, k); q.position.set(x, y, z); gRoom.add(q); };
+  ds(`ROOM  X 0–${W.toFixed(1)} m`, W / 2, .06, 1.35); ds(`Y 0–${H.toFixed(1)} m`, -2.2, .06, -H / 2); ds(`Z 0–${(MAXL * LV).toFixed(2)} m  (${MAXL} × ${LV} m)`, -2.2, MAXL * th + .3, -H / 2);
+  for (let L = 1; L <= MAXL; L++) ds(`L${L}  Z ${((L - 1) * LV).toFixed(2)}–${(L * LV).toFixed(2)}`, -2.2, (L - .5) * th, -H / 2, .8);
   layout.zones.forEach(z => {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 512; const t = new T.CanvasTexture(c);
     const m = new T.Mesh(new T.PlaneGeometry(z.w - .8, (z.w - .8) / 2), new T.MeshBasicMaterial({ map: t })); m.position.set(z.x + z.w / 2, 1.45, -H + .02); gRoom.add(m); boards.push({ z, c, t, key: '' });
@@ -234,7 +269,7 @@ function paintBoard(b, act, lv) {
   x.strokeStyle = '#9fb0c0'; x.lineWidth = 8; x.strokeRect(0, 0, 1024, 512); b.t.needsUpdate = true;
 }
 function rebuildBoxes() {
-  const sig = selected + '|' + labels + '|' + view.map(c => [c.container_id, c.x, c.y, c.z_tier, c.in_view ? 1 : 0].join()).join(';'); if (sig === lastSig) return; lastSig = sig;
+  const sig = selected + '|' + (aimInfo ? aimInfo.id : '') + '|' + labels + '|' + view.map(c => [c.container_id, c.x, c.y, c.z_tier, c.in_view ? 1 : 0].join()).join(';'); if (sig === lastSig) return; lastSig = sig;
   // v1.5.1: dispose per-box materials (edge lines, highlight overlays, label sprites) so GPU memory doesn't grow.
   // Shared geometries, cached textures and the cached Lambert box materials are intentionally NOT disposed.
   while (gBox.children.length) {
@@ -244,10 +279,10 @@ function rebuildBoxes() {
   }
   pick = [];
   view.forEach(c => {
-    const hd = ((c.heading_deg % 180) + 180) % 180, aX = Math.abs(hd - 90) < 45, g = aX ? gm(boxW, th * .95, boxH) : gm(boxH, th * .95, boxW), fade = c.live && !c.in_view, sel = c.container_id === selected;
+    const hd = ((c.heading_deg % 180) + 180) % 180, aX = Math.abs(hd - 90) < 45, g = aX ? gm(boxW, th * .95, boxH) : gm(boxH, th * .95, boxW), fade = c.live && !c.in_view, sel = c.container_id === selected, aimed = !!aimInfo && c.container_id === aimInfo.id;
     const m = new T.Mesh(g, mm(colOf(c.container_id), fade)); m.position.set(c.x, (c.z_tier - .5) * th, -c.y); m.userData.id = c.container_id; gBox.add(m); pick.push(m);
     m.add(new T.LineSegments(g.userData.e || (g.userData.e = new T.EdgesGeometry(g)), new T.LineBasicMaterial({ color: 0x0d1b2a, transparent: true, opacity: fade ? .3 : .9 })));
-    if (sel || (c.live && c.in_view)) { const o = new T.Mesh(g, new T.MeshBasicMaterial({ color: sel ? 0xffc400 : 0x1fbf75, transparent: true, opacity: sel ? .5 : .22, depthWrite: false })); o.scale.setScalar(1.07); m.add(o); }
+    if (sel || aimed || (c.live && c.in_view)) { const o = new T.Mesh(g, new T.MeshBasicMaterial({ color: sel ? 0xffc400 : aimed ? 0x2bbee8 : 0x1fbf75, transparent: true, opacity: sel ? .5 : aimed ? .45 : .22, depthWrite: false })); o.scale.setScalar(1.07); m.add(o); }
     if (labels) {
       const s = sprite(`L${c.z_tier}  ${c.container_id} · Z ${(c.z_m - LV).toFixed(1)}–${c.z_m.toFixed(1)}`, sel ? '#8a5a00' : '#0d1b2a', sel ? 'rgba(255,214,0,.97)' : 'rgba(255,255,255,.96)', 30, 1.5);
       s.position.set(c.x, (c.z_tier - .5) * th, -c.y); gBox.add(s);
@@ -269,10 +304,19 @@ function init3d() {
   capS = new T.Mesh(new T.SphereGeometry(1, 16, 12), dm(0x2bbee8)); capS.renderOrder = 10; gDot.add(capS);
   dcv = document.createElement('canvas'); dcv.width = 520; dcv.height = 56; dtex = new T.CanvasTexture(dcv);
   devLbl = new T.Sprite(new T.SpriteMaterial({ map: dtex, depthTest: false, transparent: true })); devLbl.renderOrder = 11; gDot.add(devLbl);
-  const cg = new T.ConeGeometry(.8 * u, 2.2 * u, 24, 1, true); cg.translate(0, -1.1 * u, 0); cg.rotateX(Math.PI / 2);
-  cone = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x2bbee8, transparent: true, opacity: .25, side: T.DoubleSide, depthWrite: false, depthTest: false })); cone.position.y = .3 * u; cone.renderOrder = 7; gDot.add(cone);
-  trailGeo = new T.BufferGeometry(); trailGeo.setAttribute('position', new T.BufferAttribute(new Float32Array(360), 3)); trailGeo.setDrawRange(0, 0);
-  trailPts = new T.Points(trailGeo, new T.PointsMaterial({ color: 0xe5484d, size: 5, sizeAttenuation: false, depthTest: false })); trailPts.renderOrder = 6; sc.add(trailPts);
+  // v1.6: unit cone, apex at the origin, base 1 unit down (-y). Each frame it is moved to the camera, turned toward the aimed point and
+  // scaled (x = half width of the picture on the board, y = distance, z = half height of the picture) so its base lands on the containers in view.
+  const cg = new T.ConeGeometry(1, 1, 4, 1, true); cg.rotateY(Math.PI / 4); cg.translate(0, -.5, 0);      // square pyramid: base corners at (+-.707, +-.707)
+  cone = new T.Mesh(cg, new T.MeshBasicMaterial({ color: 0x2bbee8, transparent: true, opacity: .13, side: T.DoubleSide, depthWrite: false, depthTest: false })); cone.renderOrder = 7; sc.add(cone);
+  const cr = new T.LineSegments(new T.EdgesGeometry(cg), new T.LineBasicMaterial({ color: 0x2bbee8, transparent: true, opacity: .8, depthTest: false })); cr.renderOrder = 8; cone.add(cr);
+  focusWin = new T.Group(); const bg = new T.BoxGeometry(1, 1, 1);
+  const fl = new T.Mesh(bg, new T.MeshBasicMaterial({ color: 0x2bbee8, transparent: true, opacity: .16, depthWrite: false, depthTest: false })); fl.renderOrder = 8;
+  const fe = new T.LineSegments(new T.EdgesGeometry(bg), new T.LineBasicMaterial({ color: 0x7df0ff, depthTest: false })); fe.renderOrder = 9; focusWin.add(fl, fe); focusWin.visible = false; sc.add(focusWin);
+  gAimM = mkMark('#ffb000'); gPinM = mkMark('#ff2d95');
+  // v1.7: the walked path keeps up to TRAIL_MAX points (was 120, which cut the route short) and is drawn as dots + a connecting line
+  trailGeo = new T.BufferGeometry(); trailGeo.setAttribute('position', new T.BufferAttribute(new Float32Array(TRAIL_MAX * 3), 3)); trailGeo.setDrawRange(0, 0);
+  trailPts = new T.Points(trailGeo, new T.PointsMaterial({ color: 0xe5484d, size: 5, sizeAttenuation: false, depthTest: false })); trailPts.renderOrder = 6; trailPts.frustumCulled = false;
+  const tl = new T.Line(trailGeo, new T.LineBasicMaterial({ color: 0xe5484d, transparent: true, opacity: .55, depthTest: false })); tl.renderOrder = 6; tl.frustumCulled = false; trailPts.add(tl); sc.add(trailPts);
   new ResizeObserver(() => { const w = el.clientWidth, h = el.clientHeight; if (w && h) { R.setSize(w, h); cm.aspect = w / h; cm.updateProjectionMatrix(); } }).observe(el);
   const d = R.domElement; let drag = null, ray = new T.Raycaster();
   d.addEventListener('contextmenu', e => e.preventDefault());
@@ -306,6 +350,19 @@ function focusBox(id) {
   const c = view.find(c => c.container_id === id); if (!c) return;
   fly({ t: 0, p: 1.0, r: Math.max(8, boxW * 1.8), tx: c.x, ty: (c.z_tier - .5) * th, tz: -c.y });
 }
+const DOWN = T ? new T.Vector3(0, -1, 0) : null;
+function mkMark(col) {
+  const g = new T.Group(), m = (c, o) => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthTest: false, depthWrite: false });
+  const s = new T.Mesh(new T.SphereGeometry(1, 20, 14), m(col, 1)), l = new T.Mesh(new T.BoxGeometry(1, 1, 1), m(col, .8)); s.renderOrder = 12; l.renderOrder = 11;
+  const cv = document.createElement('canvas'); cv.width = 520; cv.height = 56; const tx = new T.CanvasTexture(cv), lb = new T.Sprite(new T.SpriteMaterial({ map: tx, depthTest: false, transparent: true })); lb.renderOrder = 13;
+  g.add(s, l, lb); g.visible = false; sc.add(g); return { g, s, l, lb, cv, tx, col, txt: '' };
+}
+function placeMark(M, x, y, hS, txt, e, lift) {
+  if (txt !== M.txt) { M.txt = txt; const c = M.cv.getContext('2d'); c.clearRect(0, 0, 520, 56); c.fillStyle = M.col; c.strokeStyle = '#fff'; c.lineWidth = 4; c.beginPath(); c.roundRect(2, 2, 516, 52, 12); c.fill(); c.stroke();
+    c.fillStyle = '#fff'; c.font = '800 26px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 260, 29); M.tx.needsUpdate = true; }
+  M.g.visible = true; M.s.scale.setScalar(6 * e); M.s.position.set(x, hS, -y); M.l.scale.set(2 * e, Math.max(hS, .001), 2 * e); M.l.position.set(x, hS / 2, -y);
+  M.lb.scale.set(24 * e * 520 / 56, 24 * e, 1); M.lb.position.set(x, hS + lift * e, -y);
+}
 function paintDev(txt) { const x = dcv.getContext('2d'); x.clearRect(0, 0, 520, 56); x.fillStyle = '#1d6fe8'; x.strokeStyle = '#fff'; x.lineWidth = 4; x.beginPath(); x.roundRect(2, 2, 516, 52, 12); x.fill(); x.stroke(); x.fillStyle = '#fff'; x.font = '800 26px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, 260, 29); dtex.needsUpdate = true; }
 let t0 = performance.now();
 function loop(now) {
@@ -318,22 +375,29 @@ function loop(now) {
   const e = 2 * orb.r * Math.tan(Math.PI / 9) / Math.max(200, R.domElement.clientHeight), lh = cfg.labelPx * e;
   gBox.children.forEach(q => { if (q.isSprite) q.scale.set(lh * q.userData.a, lh, 1); });
   if (cfg.follow && dev && !dragging && !goal) { orb.tx += (dev.x - orb.tx) * Math.min(1, dt * 3); orb.tz += (-dev.y - orb.tz) * Math.min(1, dt * 3); }
-  gDot.visible = !!dev && cfg.dot; trailPts.visible = cfg.trail; if (dev) {
-    const pu = .5 + .5 * Math.sin(now / 300), dz = Math.max(dev.z, .05), cu = layout ? 1 : W / 20;
-    gDot.position.set(dev.x, 0, -dev.y); cone.rotation.y = Math.atan2(-dir[0], dir[1]); cone.scale.setScalar(Math.max(1, orb.r * .05));
-    cone.position.y = Math.max(.3 * cu, dev.z);                                  // v1.5.1: cone now sits at the real camera height
+  gDot.visible = !!dev && cfg.dot; trailPts.visible = cfg.trail; cone.visible = gDot.visible; focusWin.visible = false; gAimM.g.visible = gPinM.g.visible = false; if (dev) {
+    const pu = .5 + .5 * Math.sin(now / 300), dz = Math.max(zS(dev.z), .05), cu = layout ? 1 : W / 20;
+    gDot.position.set(dev.x, 0, -dev.y);
+    if (aimT) { aimS = aimS || { ...aimT }; for (const k of ['x', 'y', 'h', 'hw', 'vhS']) aimS[k] += (aimT[k] - aimS[k]) * Math.min(1, dt * 6); } else aimS = null;
+    // v1.6 beam: apex = camera, axis = toward the pointed spot, base = a small focus box on the part being pointed at
+    const P = new T.Vector3(dev.x, dz, -dev.y), Q = aimS ? new T.Vector3(aimS.x, zS(aimS.h), -aimS.y) : new T.Vector3(dev.x + dir[0] * 2.2 * cu, dz, -dev.y - dir[1] * 2.2 * cu);
+    const v = Q.clone().sub(P), L = Math.max(.4, v.length()); v.normalize();
+    cone.position.copy(P); cone.quaternion.setFromUnitVectors(DOWN, v); const K = 1.4142; cone.scale.set((aimS ? aimS.hw : L * .3) * K, L, (aimS ? aimS.vhS : L * .3) * K);
+    if (aimS) { focusWin.visible = cfg.dot; focusWin.position.set(aimS.x, zS(aimS.h), -aimS.y); focusWin.scale.set(aimS.hw * 2, aimS.vhS * 2, boxH * 2.2); }
+    if (aimS && aimInfo) placeMark(gAimM, aimS.x, aimS.y, zS(aimS.h), 'POINTER  ' + aimInfo.h.toFixed(2) + ' m · L' + aimInfo.level, e, 26);
+    if (pinT && pinInfo) placeMark(gPinM, pinT.x, pinT.y, zS(pinT.h), 'PIN  ' + pinInfo.h.toFixed(2) + ' m · L' + pinInfo.level, e, 56);
     sp.scale.setScalar(9 * e); sp.position.y = 9 * e; halo.scale.setScalar((26 + 8 * pu) * e); ring.scale.setScalar((16 + 6 * pu) * e);
     pole.scale.set(2.2 * e, dz, 2.2 * e); pole.position.y = dz / 2; capS.scale.setScalar(5 * e); capS.position.y = dz;
     devLbl.scale.set(26 * e * 520 / 56, 26 * e, 1); devLbl.position.y = dz + 28 * e;
-    const tx = `DEVICE  X ${dev.x.toFixed(1)}  Y ${dev.y.toFixed(1)}  Z ${dev.z.toFixed(1)}`; if (tx !== lastDevTxt) { lastDevTxt = tx; paintDev(tx); }
+    const tx = `CAMERA  X ${dev.x.toFixed(1)}  Y ${dev.y.toFixed(1)}  Z ${dev.z.toFixed(2)} m`; if (tx !== lastDevTxt) { lastDevTxt = tx; paintDev(tx); }
   }
   R.render(sc, cm); requestAnimationFrame(loop);
 }
 
-// ================= blue dot: enters through the door, then follows the camera =================
+// ================= blue dot: enters through the door (v1.7: on the chosen side, default right), then follows the camera =================
 function moveDot(dt) {
   if (!dev || !tgt) return;
-  let gx = tgt.x, gy = tgt.y; if (layout && dev.y < .3 && gy > .3) { gx = W / 2; gy = .6; }
+  let gx = tgt.x, gy = tgt.y; if (layout && dev.y < .3 && gy > .3) { gx = doorX(); gy = .6; }
   const dx = gx - dev.x, dy = gy - dev.y, dist = Math.hypot(dx, dy);
   if (dist > .02) {
     const step = Math.min(dist, Math.min(2.2, dist * 3) * dt); dev.x += dx / dist * step; dev.y += dy / dist * step;
@@ -341,29 +405,123 @@ function moveDot(dt) {
   }
   dev.z += (tgt.z - dev.z) * Math.min(1, dt * 3);
   const l = trail[trail.length - 1]; if (!l || Math.hypot(dev.x - l[0], dev.y - l[1]) > .08) {
-    trail.push([dev.x, dev.y]); if (trail.length > 120) trail.shift();
+    trail.push([dev.x, dev.y]); if (trail.length > TRAIL_MAX) trail.shift();
     const a = trailGeo.attributes.position.array; trail.forEach((p, i) => { a[i * 3] = p[0]; a[i * 3 + 1] = .04; a[i * 3 + 2] = -p[1]; }); trailGeo.attributes.position.needsUpdate = true; trailGeo.setDrawRange(0, trail.length);
   }
 }
 function setTarget() {
-  if (ls.status === 'idle') { dev = tgt = null; trail = []; hasHeading = false; if (trailGeo) trailGeo.setDrawRange(0, 0); lastStatus = 'idle'; return; }
-  if (lastStatus === 'idle' && layout) { dev = { x: W / 2, y: -1.3, z: 0 }; trail = []; dir = [0, 1]; }
+  // v1.7: going idle keeps the walked path on the map and remembers the last camera position (Clear map wipes both)
+  if (ls.status === 'idle') { fastAim = aimInfo = aimT = aimS = null; if (dev) lastDev = { x: dev.x, y: dev.y, z: dev.z }; dev = tgt = null; hasHeading = false; lastStatus = 'idle'; return; }
+  if (lastStatus === 'idle' && layout) { dev = { x: doorX(), y: -1.3, z: 0 }; trail = []; dir = [0, 1]; }
   lastStatus = ls.status;
+  if (aimT) { tgt = { x: clampX(aimT.x), y: aimT.y - aimT.D, z: aimT.h }; if (!dev) dev = { ...tgt }; hasHeading = false; return; }   // v1.6: camera height = height of the pointer, standoff from the cone's width
   let d = [ls.device, ls.camera, ls.cam].find(o => o && isFinite(o.x) && isFinite(o.y));
   if (!d) {
     const v = view.filter(c => c.in_view), a = k => v.reduce((t, c) => t + k(c), 0) / v.length;
     if (v.length) d = { x: a(c => c.x), y: a(c => c.y), z: a(c => (c.z_tier - .5) * 2.59) };
   }
   if (d) {
-    tgt = { x: d.x, y: d.y, z: +d.z || 0 }; if (!dev) dev = { ...tgt };
+    tgt = { x: clampX(d.x), y: d.y, z: +d.z || 0 }; if (!dev) dev = { ...tgt };
     // v1.5.1: if the backend sends a heading (degrees, 0 = +Y/north, clockwise), point the cone with it
     const hdg = [d.heading_deg, d.heading, d.yaw_deg, d.yaw].find(v => v != null && isFinite(v));
     if (hdg != null) { hasHeading = true; const r = hdg * Math.PI / 180; dir = [Math.sin(r), Math.cos(r)]; } else hasHeading = false;
   }
 }
 
+
+// ================= pointer height (v1.6): where the camera / mouse points on the board -> metres above the ground =================
+// Every tag has a position on the board picture (bx, by) and a level (z_tier). Tags of one column are fitted  by = a + b * level,
+// so a level is b pixels tall and the ground line (0 m) is half a level below the centre of level 1.  height = ((by - a) / b - 0.5) * 2.59 m.
+const med = a => { const q = [...a].sort((x, y) => x - y), n = q.length; return n ? (n % 2 ? q[(n - 1) / 2] : (q[n / 2 - 1] + q[n / 2]) / 2) : null; };
+const apply3 = (m, u, v) => { const w = m[6] * u + m[7] * v + m[8]; return [(m[0] * u + m[1] * v + m[2]) / w, (m[3] * u + m[4] * v + m[5]) / w]; };
+function inv3(m) {
+  const [a, b, c, d, e, f, g, h, i] = m, A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g, det = a * A + b * B + c * C; if (Math.abs(det) < 1e-12) return null;
+  return [A / det, -(b * i - c * h) / det, (b * f - c * e) / det, B / det, (a * i - c * g) / det, -(a * f - c * d) / det, C / det, -(a * h - b * g) / det, (a * e - b * d) / det];
+}
+function buildGauge(rows) {
+  const grp = {}; rows.filter(c => isFinite(c.bx) && isFinite(c.by)).forEach(c => (grp[c.checkpoint || '?'] = grp[c.checkpoint || '?'] || []).push(c));
+  const cols = Object.keys(grp).map(k => {
+    const g = grp[k], n = g.length, mt = g.reduce((s, c) => s + c.z_tier, 0) / n, my = g.reduce((s, c) => s + c.by, 0) / n; let sxx = 0, sxy = 0;
+    g.forEach(c => { sxx += (c.z_tier - mt) ** 2; sxy += (c.z_tier - mt) * (c.by - my); });
+    const b = sxx > 1e-9 ? sxy / sxx : null;
+    return { k, g, mt, my, bx: g.reduce((s, c) => s + c.bx, 0) / n, x: g.reduce((s, c) => s + c.x, 0) / n, b: b != null && Math.abs(b) > 3 ? b : null, a: null };
+  }).sort((p, q) => p.bx - q.bx);
+  const bs = cols.filter(c => c.b != null).map(c => c.b), pitch = med(bs.map(Math.abs)), sgn = Math.sign(med(bs) || 0);
+  cols.forEach(c => { if (c.b == null && pitch) c.b = sgn * pitch; if (c.b != null) c.a = c.my - c.b * c.mt; });   // a column with one tag borrows the pitch of the others
+  return { cols, pitch, ok: cols.length > 0 };
+}
+const hOfCol = (col, by) => col.b != null ? ((by - col.a) / col.b - .5) * LV : null;
+function xOfBx(bx) {            // board x -> yard x (m), straight line between the columns, extended past the outer ones
+  const c = G.cols; if (!c.length) return null; if (c.length === 1) return c[0].x;
+  let i = 0; while (i < c.length - 2 && bx > c[i + 1].bx) i++; const p = c[i], q = c[i + 1], d = q.bx - p.bx; return d ? p.x + (bx - p.bx) * (q.x - p.x) / d : p.x;
+}
+function heightAt(bx, by) {
+  if (!G || !G.ok || !isFinite(bx) || !isFinite(by)) return null;
+  const col = G.cols.reduce((m, c) => Math.abs(c.bx - bx) < Math.abs(m.bx - bx) ? c : m), tag = col.g.reduce((m, c) => Math.abs(c.by - by) < Math.abs(m.by - by) ? c : m);
+  let h = hOfCol(col, by), mode = 'measured'; if (h == null) { h = (tag.z_tier - .5) * LV; mode = 'level'; }
+  const raw = h, top = Math.max(...col.g.map(c => c.z_tier)) * LV; h = Math.max(0, Math.min(h, (MAXL + 1) * LV));
+  return { id: tag.container_id, tag, col, h, raw, mode, top, level: Math.min(MAXL, Math.max(1, Math.ceil(h / LV - 1e-6))), above: raw > top + .15 * LV, below: raw < -.1 * LV };
+}
+function frameExtent(A, col) {  // how wide / tall (m) the picture is on the board -> sizes the cone
+  const P = [[0, 0], [A.w, 0], [A.w, A.h], [0, A.h]].map(p => apply3(A.H, p[0], p[1])), bxs = P.map(p => p[0]), bys = P.map(p => p[1]);
+  const hw = G.cols.length > 1 ? Math.abs(xOfBx(Math.max(...bxs)) - xOfBx(Math.min(...bxs))) / 2 : null;
+  const h0 = hOfCol(col, Math.min(...bys)), h1 = hOfCol(col, Math.max(...bys));
+  return { hw, vh: h0 != null ? Math.abs(h1 - h0) / 2 : null };
+}
+function updateAim() {
+  const A = fastAim; aimInfo = aimT = null;
+  if (A && layout && G && G.ok && A.H && isFinite(A.bx)) {
+    const r = heightAt(A.bx, A.by);
+    if (r) {
+      aimInfo = r; const ext = frameExtent(A, r.col), fx = xOfBx(A.bx);
+      const hw = Math.max(.5, Math.min(ext.hw != null && isFinite(ext.hw) ? ext.hw : 9, boxW * .5 + .2)), D = Math.min(6, Math.max(1.6, hw / Math.tan(cfg.fov * Math.PI / 360)));
+      const vh = th * .6;   // the focus window = about one container wide and one level tall, never the whole picture
+      aimT = { x: fx, y: r.tag.y, h: r.h, hw, D, vhS: vh };
+    }
+  }
+  pinInfo = pinT = null;
+  if (pin && G && G.ok) { pinInfo = heightAt(pin.bx, pin.by); if (pinInfo) pinT = { x: xOfBx(pin.bx), y: pinInfo.tag.y, h: pinInfo.h }; }
+  const id = aimInfo ? aimInfo.id : ''; if (id !== lastAimId) { lastAimId = id; if (R) panel(); }
+  setTarget(); renderAim();
+}
+function vidMap() {
+  const im = $('liveImg'); if (!im.naturalWidth || im.style.display === 'none') return null;
+  const b = $('vbox').getBoundingClientRect(), s = Math.min(b.width / im.naturalWidth, b.height / im.naturalHeight);
+  return { b, s, ox: (b.width - im.naturalWidth * s) / 2, oy: (b.height - im.naturalHeight * s) / 2, nw: im.naturalWidth, nh: im.naturalHeight };
+}
+const aimTxt = r => `${r.h.toFixed(2)} m · L${r.level}` + (r.mode === 'level' ? ' (level)' : '');
+function renderAim() {
+  const a = aimInfo, set = (id, v) => { const e = $(id); if (e && e.textContent !== String(v)) e.textContent = v; };
+  // v1.7: when the pointer leaves the containers the last reading stays on screen (badge says "last reading") instead of going blank
+  const s = a || lastAimInfo; if (a) lastAimInfo = a;
+  set('aimH', s ? s.h.toFixed(2) : '—'); set('aimL', s ? 'L' + s.level : '—'); set('aimId', s ? s.id : '—'); set('aimTop', s ? s.top.toFixed(2) + ' m' : '—'); set('hAim', s ? s.h.toFixed(2) : '—');
+  set('aimBadge', !a ? (s ? 'last reading' : 'no pointer') : a.mode === 'measured' ? 'measured' : 'level only'); $('aimBadge').className = 'badge' + (a ? '' : ' off');
+  set('aimMsg', !a ? 'Cross-hair in the video = pointer. Hover the video to read any spot, click to pin it.' :
+    a.mode === 'level' ? `Only one container per column is visible, so the height is the middle of level L${a.level}. Put 2+ containers in a column to measure continuously.` :
+    `Pointer is ${a.h.toFixed(2)} m above the ground line (bottom of the lowest container) · inside L${a.level} (${((a.level - 1) * LV).toFixed(2)}–${(a.level * LV).toFixed(2)} m)` + (a.above ? ' · above the stack top' : a.below ? ' · below the ground line' : '') + '.');
+  set('pinH', pinInfo ? pinInfo.h.toFixed(2) + ' m · L' + pinInfo.level : 'click the video'); set('pinD', pinInfo && a ? (a.h - pinInfo.h >= 0 ? '+' : '−') + Math.abs(a.h - pinInfo.h).toFixed(2) + ' m' : '—');
+  const tg = $('aimTag'); if (a) { tg.style.display = 'block'; set('aimTag', '⌖ ' + aimTxt(a)); } else tg.style.display = 'none';
+  const pm = $('pinMark'), M = vidMap(), H = fastAim && fastAim.H && inv3(fastAim.H);
+  if (pinInfo && M && H) { const q = apply3(H, pin.bx, pin.by), px = M.ox + q[0] * M.s, py = M.oy + q[1] * M.s;
+    if (isFinite(px) && q[0] >= 0 && q[1] >= 0 && q[0] <= M.nw && q[1] <= M.nh) { pm.style.display = 'block'; pm.style.left = px + 'px'; pm.style.top = py + 'px'; set('pinTxt', pinInfo.h.toFixed(2) + ' m'); } else pm.style.display = 'none'; }
+  else pm.style.display = 'none';
+  const now = Date.now(), key = a ? a.id + a.h.toFixed(2) : ''; if (a && key !== lastLogKey && now - lastLogT > 400) { lastLogKey = key; lastLogT = now; logAim('camera', a); }
+}
+function logAim(src, r) { aimLog.push([new Date().toISOString(), src, r.id, r.col.k, 'L' + r.level, r.h.toFixed(3), r.mode]); if (aimLog.length > 3000) aimLog.shift(); }
+(function videoPointer() {
+  const vb = $('vbox'), tip = $('aimTip');
+  const at = e => { const M = vidMap(), A = fastAim; if (!M || !A || !A.H) return null; const u = (e.clientX - M.b.left - M.ox) / M.s, v = (e.clientY - M.b.top - M.oy) / M.s;
+    if (u < 0 || v < 0 || u > M.nw || v > M.nh) return null; const p = apply3(A.H, u * A.w / M.nw, v * A.h / M.nh); return { bx: p[0], by: p[1], x: e.clientX - M.b.left, y: e.clientY - M.b.top }; };
+  vb.addEventListener('mousemove', e => { const p = at(e), r = p && heightAt(p.bx, p.by); if (!r) { tip.style.display = 'none'; return; } tip.style.display = 'block'; tip.style.left = p.x + 'px'; tip.style.top = Math.max(2, p.y - 30) + 'px'; tip.textContent = aimTxt(r) + ' · ' + r.id; });
+  vb.addEventListener('mouseleave', () => tip.style.display = 'none');
+  vb.addEventListener('click', e => { if (e.target !== $('liveImg') && e.target !== vb) return; const p = at(e), r = p && heightAt(p.bx, p.by); if (!r) return; pin = { bx: p.bx, by: p.by }; logAim('pin', r); updateAim(); });
+})();
+$('pinClr').onclick = () => { pin = pinInfo = pinT = null; renderAim(); };
+$('aimCsv').onclick = () => dl(`yard_pointer_heights_${stamp()}.csv`, [['time', 'source', 'container_id', 'segment', 'level', 'height_m', 'mode']].concat(aimLog));
+
 // ================= data + panels =================
-function makeView() {
+function makeView() { const v = makeView0(); G = buildGauge(v); return v; }
+function makeView0() {
   if (!(layout && stackMode)) return raw.map(c => ({ ...c, _y: c.y }));
   const by = {}, out = []; raw.forEach(c => (by[c.checkpoint] = by[c.checkpoint] || []).push(c));
   layout.zones.forEach(z => z.segments.forEach(sg => {
@@ -374,6 +532,7 @@ function makeView() {
 }
 function detected() {
   if (selected) return view.find(c => c.container_id === selected) || null;
+  if (aimInfo) { const c = view.find(c => c.container_id === aimInfo.id); if (c) return c; }
   if (!dev || !view.length) return null;
   const v = view.filter(c => c.in_view), pool = v.length ? v : view, sc2 = c => (c.x - dev.x) ** 2 + (c.y - dev.y) ** 2 - .001 * c.z_tier;
   return pool.reduce((a, b) => sc2(b) < sc2(a) ? b : a);
@@ -385,6 +544,20 @@ function pos(c) {
   const bay = g ? g.slots.reduce((b, sl, i) => Math.abs(sl.y - c._y) < Math.abs(g.slots[b].y - c._y) ? i : b, 0) + 1 : '?';
   return { a: L, z: si + 1, loc: `${L}${si + 1}-${bay}` };
 }
+// v1.7: always-on dimensions overlay on the map. Every number comes from the layout (not from the camera), so it is there
+// before the video starts, while the camera looks elsewhere and after it stops. The camera only decides which row is highlighted.
+function renderDims() {
+  const el = $('dimHud'); if (!el) return;
+  if (!layout || !cfg.dims) { el.style.display = 'none'; return; }
+  const zs = layout.zones, cam = dev || lastDev, az = cam && zoneOf(cam), lv = cam ? levelOf(cam.z) : 0, ai = aimInfo || lastAimInfo;
+  const h = `<b>📐 Room ${W.toFixed(1)} × ${H.toFixed(1)} × ${(MAXL * LV).toFixed(2)} m</b> <small>X × Y × Z</small><br><small>Entry door: ${cfg.entry} side · X ${doorX().toFixed(1)} m</small>` +
+    zs.map(z => { const b = zoneBox(z); return `<div class="hz${az === z ? ' on' : ''}"><b>${esc(z.name)}</b> · X ${rg(b.x0, b.x1)} · Y ${rg(b.y0, b.y1)} · Z 0.0–${b.zH.toFixed(2)}<br><small>${z.segments.map(g => esc(g.name) + ' X ' + rg(g.x, g.x + g.w)).join(' │ ')}</small></div>`; }).join('') +
+    `<div class="lvs">${[4, 3, 2, 1].map(L => `<span class="${lv === L ? 'on' : ''}">L${L} ${((L - 1) * LV).toFixed(2)}–${(L * LV).toFixed(2)}</span>`).join('')}</div>` +
+    `<div class="hz">📷 ${cam ? `X ${cam.x.toFixed(1)} · Y ${cam.y.toFixed(1)} · Z ${cam.z.toFixed(2)} m` : '—'}${cam && !dev ? ' <small>(last)</small>' : ''}<br>⌖ ${ai ? ai.h.toFixed(2) + ' m · L' + ai.level + (aimInfo ? '' : ' <small>(last)</small>') : '—'}</div>`;
+  if (h !== lastDims) { lastDims = h; el.innerHTML = h; }
+  el.style.display = 'block';
+}
+function setDims() { $('dimBtn').textContent = '📐 Dimensions: ' + (cfg.dims ? 'on' : 'off'); $('dimBtn').classList.toggle('on', !!cfg.dims); saveCfg(); lastDims = ''; renderDims(); }
 function panel() {
   const c = detected(), p = pos(c), set = (id, v) => { const e = $(id); if (e.textContent !== String(v)) e.textContent = v; };
   set('hId', c ? c.container_id : '—'); set('hLoc', c ? p.loc : '—'); set('hArea', c ? p.a : '—'); set('hZone', c ? p.z : '—'); set('hLvl', c ? c.z_tier : '—');
@@ -398,16 +571,19 @@ function panel() {
   if (sh !== lastStack) {                                                          // v1.5.1: only touch the DOM when the stack actually changed
     lastStack = sh; sl.innerHTML = sh; sl.querySelectorAll('.lv').forEach(e => e.onclick = () => { selected = e.dataset.id; panel(); });
   }
-  set('dx', dev ? dev.x.toFixed(2) + ' m' : '—'); set('dy', dev ? dev.y.toFixed(2) + ' m' : '—'); set('dz', dev ? dev.z.toFixed(2) + ' m' : '—');
-  const dz = dev && zoneOf(dev); set('dZone', dz ? dz.name : '—'); set('dLvl', dev && layout ? 'L' + levelOf(dev.z) : '—');
-  set('dHint', dev ? 'Blue dot = camera position on the floor · blue pole = camera height · red dots = path walked' : 'No device position yet — press Play or Camera to start tracking');
-  const az = (c && layout && layout.zones.find(z => z.name === (c.checkpoint || '').split('/')[0])) || (dev && zoneOf(dev)) || (layout && layout.zones[0]);
+  // v1.7: device location keeps the last known position when the camera stops / is out of play
+  const cd = dev || lastDev;
+  set('dx', cd ? cd.x.toFixed(2) + ' m' : '—'); set('dy', cd ? cd.y.toFixed(2) + ' m' : '—'); set('dz', cd ? cd.z.toFixed(2) + ' m' : '—');
+  const dz = cd && zoneOf(cd); set('dZone', dz ? dz.name : '—'); set('dLvl', cd && layout ? 'L' + levelOf(cd.z) : '—');
+  set('dHint', dev ? 'Blue dot = camera on the floor · blue pole = camera height · cone = what the camera sees (it ends on the containers it is aimed at) · amber marker = pointer height from the ground · red dots = path walked' : cd ? 'Camera stopped — showing the last known position and the full path walked' : 'No device position yet — press Play or Camera to start tracking');
+  const az = (c && layout && layout.zones.find(z => z.name === (c.checkpoint || '').split('/')[0])) || (cd && zoneOf(cd)) || (layout && layout.zones[0]);
   if (az) { const bx = zoneBox(az), n = view.filter(v => (v.checkpoint || '').startsWith(az.name + '/')).length; set('zdName', az.name); set('zdX', rg(bx.x0, bx.x1)); set('zdY', rg(bx.y0, bx.y1)); set('zdZ', '0.0–' + bx.zH.toFixed(2));
     set('zdInfo', `Size ${(bx.x1 - bx.x0).toFixed(1)} × ${(bx.y1 - bx.y0).toFixed(1)} × ${bx.zH.toFixed(2)} m (W×D×H) · ${az.segments.length} segment(s) · ${n} container(s) · ${MAXL} levels of ${LV} m`); }
   set('liveTag', liveOn ? '● Live' : ''); set('mapInfo', view.length + ' container(s)');
   set('sStat', ls.status || 'idle'); set('sFrame', ls.frame || '—'); set('sView', ls.in_view || 0); set('sMap', view.length);
   boards.forEach(b => { const act = !!(dev && zoneOf(dev) === b.z), lv = dev ? levelOf(dev.z) : 0, k = act + '' + lv; if (k !== b.key) { b.key = k; paintBoard(b, act, lv); } });
   if (R) rebuildBoxes();
+  renderDims();
   const rh = recent.map(r => `<tr data-id="${r.container_id}" class="${r.container_id === selected ? 'sel' : ''}"><td>${fmtTime(r.seen_at)}</td><td>${r.container_id}</td><td>${r.checkpoint}</td><td>${r.z_tier}</td></tr>`).join('');
   if (rh !== lastRows) {                                                           // v1.5.1: skip identical table rewrites
     lastRows = rh; $('rows').innerHTML = rh;
@@ -421,7 +597,7 @@ async function tick() {
     // v1.5.1: while live, let the "Current handling" panel follow the camera once the selected container leaves the view
     if (selected && liveOn && cfg.autoRelease && !view.some(c => c.container_id === selected && c.in_view)) selected = null;
     if (!layout) { const m = Math.max(0, ...raw.map(c => Math.max(c.x, c.y))), y = Math.max(100, Math.ceil(m / 50) * 50); if (y !== W) { W = H = y; if (R) { buildRoom(); setView('reset'); } } }
-    setTarget(); $('dot').className = 'dot on'; $('status').textContent = liveOn ? 'live · following the video' : 'live · updating every ' + cfg.rate + ' s'; panel(); if (page === 'ops') renderPage(); else if (page === 'inv' || page === 'search') fillRows();
+    if (ls.aim) fastAim = ls.aim; updateAim(); setTarget(); $('dot').className = 'dot on'; $('status').textContent = liveOn ? 'live · following the video' : 'live · updating every ' + cfg.rate + ' s'; panel(); if (page === 'ops') renderPage(); else if (page === 'inv' || page === 'search') fillRows();
   } catch { $('dot').className = 'dot'; $('status').textContent = 'disconnected — retrying'; }
 }
 $('bId').onclick = () => { const c = detected(); if (c) { selected = c.container_id; panel(); } };
@@ -471,7 +647,8 @@ const locate = id => { selected = id; nav('live'); panel(); setTimeout(() => foc
 function setLabels(on) { labels = on; cfg.labels = on; saveCfg(); $('lblBtn').textContent = '🏷 Labels: ' + (on ? 'on' : 'off'); $('lblBtn').classList.toggle('on', on); if (R) panel(); }
 function setLock(on) { cfg.lock = on; saveCfg(); $('lockBtn').textContent = on ? '🔒 Wheel zoom: locked' : '🔓 Wheel zoom: on'; $('lockBtn').classList.toggle('on', on); }
 $('lblBtn').onclick = () => setLabels(!labels); $('lockBtn').onclick = () => setLock(!cfg.lock);
-$('zDev').onclick = () => { if (dev) fly({ t: 0, p: .95, r: Math.max(10, defR() * .35), tx: dev.x, ty: 0, tz: -dev.y }); else $('status').textContent = 'no device position yet — press Play or Camera'; };
+$('dimBtn').onclick = () => { cfg.dims = !cfg.dims; setDims(); };
+$('zDev').onclick = () => { const cd = dev || lastDev; if (cd) fly({ t: 0, p: .95, r: Math.max(10, defR() * .35), tx: cd.x, ty: 0, tz: -cd.y }); else $('status').textContent = 'no device position yet — press Play or Camera'; };
 function zoneCSV() {
   dl(`yard_zones_${stamp()}.csv`, [['zone', 'x_min_m', 'x_max_m', 'y_min_m', 'y_max_m', 'z_height_m', 'segments', 'l1', 'l2', 'l3', 'l4', 'total']].concat((layout ? layout.zones : []).map(z => {
     const b = zoneBox(z), l = [1, 2, 3, 4].map(k => view.filter(c => (c.checkpoint || '').startsWith(z.name + '/') && c.z_tier === k).length);
@@ -517,19 +694,24 @@ function renderPage() {
       <span>Mouse-wheel zoom</span><select id="sLock"><option value="0">On</option><option value="1">Locked (use + / − buttons)</option></select>
       <span>Blue device dot</span><select id="sDot"><option value="1">Show</option><option value="0">Hide</option></select>
       <span>Walked path (red dots)</span><select id="sTrail"><option value="1">Show</option><option value="0">Hide</option></select>
+      <span>Entry door position</span><select id="sEntry"><option value="right">Right side</option><option value="center">Centre</option><option value="left">Left side</option></select>
+      <span>Dimensions overlay on the map</span><select id="sDim"><option value="1">Always show</option><option value="0">Hide</option></select>
       <span>Follow device</span><select id="sFol"><option value="0">Off</option><option value="1">On</option></select>
       <span>Release selection when it leaves view (live)</span><select id="sAuto"><option value="1">On</option><option value="0">Off</option></select>
+      <span>Camera field of view (cone)</span><select id="sFov"><option value="45">Narrow (45°)</option><option value="60">Normal (60°)</option><option value="75">Wide (75°)</option><option value="90">Ultra-wide (90°)</option></select>
       <span>Performance</span><select id="sPerf"><option value="low">Low (slow laptop)</option><option value="balanced">Balanced</option><option value="high">High (smooth, needs GPU)</option></select>
       <span>Refresh every</span><select id="sRate"><option value="1">1 s</option><option value="2">2 s</option><option value="5">5 s</option></select></div></section></div>`;
     const g = (id, v, fn) => { $(id).value = v; $(id).onchange = $(id).oninput = () => { fn($(id).value); saveCfg(); }; };
     g('sTheme', themeName, setTheme); g('sLight', $('lightR').value, v => { $('lightR').value = v; applyScene(); }); g('sLbl', labels ? 1 : 0, v => setLabels(v === '1')); g('sPx', cfg.labelPx, v => cfg.labelPx = +v);
-    g('sLock', cfg.lock ? 1 : 0, v => setLock(v === '1')); g('sDot', cfg.dot ? 1 : 0, v => cfg.dot = v === '1'); g('sTrail', cfg.trail ? 1 : 0, v => cfg.trail = v === '1'); g('sFol', cfg.follow ? 1 : 0, v => cfg.follow = v === '1'); g('sAuto', cfg.autoRelease ? 1 : 0, v => cfg.autoRelease = v === '1'); g('sRate', cfg.rate, v => cfg.rate = +v); g('sPerf', cfg.perf, setPerf);
+    g('sLock', cfg.lock ? 1 : 0, v => setLock(v === '1')); g('sDot', cfg.dot ? 1 : 0, v => cfg.dot = v === '1'); g('sTrail', cfg.trail ? 1 : 0, v => cfg.trail = v === '1');
+    g('sEntry', cfg.entry, v => { cfg.entry = v; if (R && layout) { buildRoom(); lastDims = ''; panel(); } }); g('sDim', cfg.dims ? 1 : 0, v => { cfg.dims = v === '1'; setDims(); });
+    g('sFol', cfg.follow ? 1 : 0, v => cfg.follow = v === '1'); g('sAuto', cfg.autoRelease ? 1 : 0, v => cfg.autoRelease = v === '1'); g('sRate', cfg.rate, v => cfg.rate = +v); g('sFov', cfg.fov, v => cfg.fov = +v); g('sPerf', cfg.perf, setPerf);
   }
 }
 function applyPerf() { if (!R) return; const d = devicePixelRatio || 1; R.setPixelRatio(cfg.perf === 'low' ? 1 : cfg.perf === 'balanced' ? Math.min(1.5, d) : Math.min(2, d)); const el = $('gl'); if (el.clientWidth) R.setSize(el.clientWidth, el.clientHeight); }
 function setPerf(v) { cfg.perf = v; saveCfg(); $('perfBtn').textContent = '⚡ Performance: ' + v; applyPerf(); if (R && v === 'high') $('status').textContent = 'reload the page once to turn on anti-aliasing'; }
 $('perfBtn').onclick = () => setPerf({ low: 'balanced', balanced: 'high', high: 'low' }[cfg.perf]);
-setLock(cfg.lock); setLabels(labels); $('perfBtn').textContent = '⚡ Performance: ' + cfg.perf;
+setLock(cfg.lock); setLabels(labels); setDims(); $('perfBtn').textContent = '⚡ Performance: ' + cfg.perf;
 
 // ================= live controls =================
 function setVideo() { imgOn = true; const im = $('liveImg'); im.onload = () => { im.style.display = ''; $('liveEmpty').style.display = 'none'; }; im.src = '/live/video?t=' + Date.now(); }
@@ -548,8 +730,9 @@ $('lvPlay').onclick = () => { const f = $('lvFile').files[0]; if (!f) { $('lvMsg
 $('lvStart').onclick = () => { const v = $('lvCam').value.trim(); if (v) liveCall('/live/start?source=' + encodeURIComponent(v), { method: 'POST' }); };
 $('lvStop').onclick = () => liveCall('/live/stop', { method: 'POST' });
 $('lvClear').onclick = async () => {
+  fastAim = aimInfo = aimT = aimS = pin = pinInfo = null;
   await fetch('/reset', { method: 'POST' }).catch(() => { });
-  imgOn = false; $('liveImg').style.display = 'none'; $('liveEmpty').style.display = ''; selected = null; dev = tgt = null; trail = []; $('lvMsg').textContent = 'Map cleared.'; tick();
+  imgOn = false; $('liveImg').style.display = 'none'; $('liveEmpty').style.display = ''; selected = null; dev = tgt = null; trail = []; lastDev = lastAimInfo = null; if (trailGeo) trailGeo.setDrawRange(0, 0); $('lvMsg').textContent = 'Map cleared.'; tick();
 };
 async function poll(id) {
   const o = await j('/jobs/' + id); $('upBar').style.width = (o.progress * 100) + '%'; $('upMsg').textContent = o.message;
@@ -567,14 +750,152 @@ $('upBtn').onclick = async () => {
 
 (async () => {
   try {
-    layout = await j('/layout'); $('upPanel').style.display = ''; $('livePanel').style.display = ''; $('camPanel').style.display = 'none';
+    layout = await j('/layout'); $('upPanel').style.display = ''; $('livePanel').style.display = ''; $('aimPanel').style.display = ''; $('camPanel').style.display = 'none';
     W = layout.width_m; H = layout.height_m; [boxW, boxH] = layout.box_m; th = boxH * 1.1; wh = 2.4; fh = 1.1; $('mapTitle').textContent = layout.name;
     $('zoneBtns').innerHTML = layout.zones.map(z => `<button class="ghost" data-zone="${z.name}" title="Zoom to ${z.name} — X ${rg(zoneBox(z).x0, zoneBox(z).x1)} · Y ${rg(zoneBox(z).y0, zoneBox(z).y1)} m">⌕ ${z.name}</button>`).join('');
     document.querySelectorAll('[data-zone]').forEach(b => b.onclick = () => zoomZone(b.dataset.zone));
   } catch { $('mapTitle').textContent = 'Yard map (metres)'; $('stk').style.display = 'none'; th = 3; }
   init3d(); (function lp() { tick().finally(() => setTimeout(lp, Math.max(cfg.rate, cfg.perf === 'low' ? 3 : 1) * 1000)); })();
 })();
+(function fastPoll() {
+  (liveOn && layout ? j('/live/state').then(s => { if (s && s.aim) { fastAim = s.aim; updateAim(); } }).catch(() => { }) : Promise.resolve()).finally(() => setTimeout(fastPoll, 350));
+})();
 const img = new Image(); img.onload = () => { $('videoBox').innerHTML = ''; $('videoBox').appendChild(img); }; img.src = '/video';
+
+// ===== ENTRY ON RIGHT WALL (bottom) =====
+(function () {
+  const GY0 = .4, GW = 1.6, GH = 1.5, cy = GY0 + GW / 2;
+  try { const s = document.querySelector('.sys'); if (s) s.innerHTML = s.innerHTML.replace('v1.7.0', 'v1.8 entry-right'); } catch (e) { }
+  const oB = buildRoom;
+  buildRoom = function () {
+    oB();
+    if (!layout || !gRoom) return;
+    try {
+      const tex = texC['ENTRY#0f8a5f#fff26'] && texC['ENTRY#0f8a5f#fff26'].t;
+      gRoom.children.slice().forEach(o => {
+        if (o.isSprite && tex && o.material.map === tex) gRoom.remove(o);
+        else if (o.isMesh && o.geometry.type === 'PlaneGeometry' && o.material.color && o.material.color.getHex() === 0x9fd3e6) gRoom.remove(o);
+        else if (o.isMesh && o.geometry.type === 'BoxGeometry' && Math.abs(o.position.x - (W + .1)) < .01 && Math.abs(o.geometry.parameters.depth - (H + .4)) < .01) { gRoom.remove(o); walls = walls.filter(w => w.m !== o.material); }
+      });
+      const mk = (w, h, d, x, y, z, col, test) => { const m = new T.MeshLambertMaterial({ color: col, transparent: true }), b = new T.Mesh(new T.BoxGeometry(w, h, d), m); b.position.set(x, y, z); gRoom.add(b); if (test) walls.push({ m, test }); };
+      const rt = p => p.x > W, y1 = GY0 + GW;
+      mk(doorW, .95, .2, doorX(), .475, .1, 0xdfe4e9);
+      mk(.2, wh, GY0 + .2, W + .1, wh / 2, -(GY0 - .2) / 2, 0xe5eaef, rt);
+      mk(.2, wh, H + .2 - y1, W + .1, wh / 2, -(y1 + H + .2) / 2, 0xe5eaef, rt);
+      mk(.2, wh - GH, GW, W + .1, GH + (wh - GH) / 2, -cy, 0xe5eaef, rt);
+      const fl = new T.Mesh(new T.PlaneGeometry(1, GW), new T.MeshBasicMaterial({ color: 0x0f8a5f, transparent: true, opacity: .35 }));
+      fl.rotation.x = -Math.PI / 2; fl.position.set(W - .5, .02, -cy); gRoom.add(fl);
+      const en = sprite('ENTRY', '#0f8a5f', '#fff', 26); en.position.set(W + .1, wh + .35, -cy); gRoom.add(en);
+    } catch (e) { console.error('entry', e); }
+  };
+  const oS = setTarget;
+  setTarget = function () {
+    const wasIdle = lastStatus === 'idle';
+    oS();
+    if (wasIdle && dev && layout) {
+      dev.x = W - .5; dev.y = cy; trail = [[dev.x, dev.y]];
+      if (trailGeo) { const a = trailGeo.attributes.position.array; a[0] = dev.x; a[1] = .04; a[2] = -dev.y; trailGeo.attributes.position.needsUpdate = true; trailGeo.setDrawRange(0, 1); }
+    }
+  };
+  const oR = renderDims;
+  renderDims = function () {
+    oR();
+    try { const el = document.getElementById('dimHud'); if (el && layout && /Entry door: (?!right wall)/.test(el.innerHTML)) el.innerHTML = el.innerHTML.replace(/Entry door:[^<]*/, 'Entry door: right wall, bottom · Y 0.4–2.0 m'); } catch (e) { }
+  };
+  lastDims = '';
+})();
+// ===== ENTRY VIEW TWEAK =====
+(function () {
+  const cy = 1.2;
+  const prev = setTarget;
+  setTarget = function () {
+    const wasIdle = lastStatus === 'idle';
+    prev();
+    if (wasIdle && dev && layout) {
+      dev.x = W - .6; dev.y = cy; dev.z = 1.2; dir = [-1, 0];
+      trail = [[W + .5, cy], [W - .6, cy]];
+      if (trailGeo) { const a = trailGeo.attributes.position.array; a[0] = W + .5; a[1] = .04; a[2] = -cy; a[3] = W - .6; a[4] = .04; a[5] = -cy; trailGeo.attributes.position.needsUpdate = true; trailGeo.setDrawRange(0, 2); }
+    }
+  };
+  const t = setInterval(() => {
+    if (typeof R === 'undefined' || !R || !R.render) return;
+    if (R.__view) { clearInterval(t); return; }
+    const orig = R.render.bind(R);
+    R.render = (s, c) => {
+      try {
+        if (trailPts && !trailPts.userData.hl) {
+          trailPts.userData.hl = 1; trailPts.material.size = 9; trailPts.material.color.set(0xff2d2d);
+          trailPts.children.forEach(o => { if (o.material) { o.material.opacity = 1; o.material.color.set(0xff2d2d); } });
+        }
+        if (dev && !aimS && cone && cone.visible) {
+          const L = 5, K = 1.4142, hw = 0.9, vh = 0.6;
+          const P = new T.Vector3(dev.x, Math.max(zS(dev.z), .05), -dev.y), Q = new T.Vector3(dev.x + dir[0] * L, P.y, -dev.y - dir[1] * L);
+          const v = Q.clone().sub(P).normalize();
+          cone.position.copy(P); cone.quaternion.setFromUnitVectors(DOWN, v); cone.scale.set(hw * K, L, vh * K);
+        }
+      } catch (e) { }
+      return orig(s, c);
+    };
+    R.__view = 1; clearInterval(t);
+  }, 300);
+})();
+
+// ===== UI POLISH =====
+(function () {
+  const s = document.createElement('style'); s.id = 'uiPolish';
+  s.textContent = `
+:root{--sh:0 4px 16px rgba(10,25,40,.16)}
+body{font-family:Inter,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+aside{background:linear-gradient(180deg,var(--pn),var(--bg))}
+aside a{border-left:3px solid transparent;transition:background .15s,color .15s,border-color .15s}
+aside a:hover{background:var(--gl);color:var(--g)}
+aside a.on{border-left-color:var(--g)}
+.sys{border-radius:10px;background:var(--tile)}
+header{box-shadow:0 1px 0 var(--line),0 8px 20px rgba(0,0,0,.10)}
+.panel{border-radius:14px;box-shadow:var(--sh);transition:border-color .2s,box-shadow .2s}
+.panel:hover{border-color:color-mix(in srgb,var(--g) 45%,var(--line))}
+.panel h2{font-size:12px;letter-spacing:.09em;color:var(--mute)}
+button,.btn{transition:transform .08s,filter .15s,box-shadow .15s}
+button:hover,.btn:hover{filter:brightness(1.1)}
+button:active{transform:translateY(1px) scale(.98)}
+.ghost:hover{box-shadow:0 0 0 3px color-mix(in srgb,var(--g) 20%,transparent)}
+input:focus,select:focus{outline:none;border-color:var(--g)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--g) 22%,transparent)}
+.tiles div{border:1px solid var(--line);transition:transform .15s,border-color .15s}
+.tiles div:hover{transform:translateY(-1px);border-color:var(--g)}
+.tiles b{letter-spacing:.01em}
+.mapwrap{box-shadow:inset 0 12px 40px rgba(0,0,0,.14)}
+.hud{background:color-mix(in srgb,var(--pn) 88%,transparent);backdrop-filter:blur(10px);box-shadow:var(--sh);border-radius:12px}
+.leg{backdrop-filter:blur(6px);border-radius:10px}
+.badge{border:1px solid color-mix(in srgb,var(--g) 35%,transparent)}
+.dot.on{box-shadow:0 0 0 4px rgba(31,191,117,.22)}
+.bar{height:6px}.bar i{background:linear-gradient(90deg,var(--g),#2bbee8)}
+.aimbig b{text-shadow:0 0 18px color-mix(in srgb,var(--g) 40%,transparent)}
+.video{box-shadow:0 0 0 1px var(--line)}
+.lv{transition:border-color .15s,background .15s}.lv:hover{border-color:var(--g)}
+tbody tr:hover td{background:var(--gl)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--mute);background-clip:padding-box}
+`;
+  document.head.appendChild(s);
+})();
+
+// ===== FOCUS+KEEP FIX =====
+(function () {
+  const CONE_K = 0.45, CONE_MIN = 0.6;
+  const oU = updateAim;
+  updateAim = function () { oU(); if (aimT) { aimT.hw = Math.max(CONE_MIN, aimT.hw * CONE_K); aimT.vhS *= 0.6; } };
+  const kept = new Map(), oM = makeView0;
+  makeView0 = function () {
+    const cur = new Set();
+    (raw || []).forEach(c => { if (c && c.container_id && !c._kept) { cur.add(c.container_id); kept.set(c.container_id, c); } });
+    const extra = [];
+    kept.forEach((c, id) => { if (!cur.has(id)) extra.push({ ...c, _kept: true, live: true, in_view: false, bx: undefined, by: undefined }); });
+    if (extra.length) raw = (raw || []).concat(extra);
+    return oM();
+  };
+  const cl = document.getElementById('lvClear'); if (cl) cl.addEventListener('click', () => kept.clear());
+})();
 </script>
 </body>
 </html>

@@ -6,6 +6,10 @@ Three cooperating parts, so the dashboard video never freezes while the analysis
   board model    : tags -> positions -> zone / segment / slot / tier; detects moved and removed tags
 A video file is slowed down automatically if the OCR cannot keep up, so no tag is skipped.
 
+Pointer height (v1.6): every published frame also carries "aim" = where the middle of the picture lands on the board
+(board pixels + the picture->board transform), and every container row carries its board position (bx, by, bw, bh).
+The dashboard turns those into the height above ground at the pointer. A cross-hair marks the pointer in the video.
+
 Needs: pip install opencv-python rapidocr-onnxruntime
 Env (optional): CAMERA_FIXED=1  camera does not move (skip registration)     LIVE_STEP_S=0.35  seconds between analysis steps
                 OCR_WIDTH=1280  frame width given to the OCR (bigger = reads smaller text, slower)
@@ -129,7 +133,7 @@ class LiveSession:
         self.board = Board(layout, self.vocab)
         self.state = {"status": "starting", "message": "Opening source…", "kind": "file" if self.is_file else "camera",
                       "source": str(source), "session": job_no, "progress": 0, "frame": 0, "calibrated": False,
-                      "in_view": 0, "containers": [], "view": None, "position": None,
+                      "in_view": 0, "containers": [], "view": None, "position": None, "aim": None,
                       "stats": {"ocr_passes": 0, "tags_read": 0, "lost": 0}}
         self.reader_thread = threading.Thread(target=self._run, daemon=True)
         self.ocr_thread = threading.Thread(target=self._ocr_loop, daemon=True)
@@ -326,7 +330,8 @@ class LiveSession:
             self.ocr_busy = False
 
     def _publish_board(self, n_reads):
-        rows = self.board.containers()
+        self.overlay = self.board.overlay()
+        rows = self._with_board_xy(self.board.containers())
         self.board.take_events()
         for r in rows:                                      # history in the DB: new tags and every move
             key = (r["checkpoint"], r["x"], r["y"], r["z_tier"])
@@ -338,7 +343,6 @@ class LiveSession:
         for cid in list(self.written):
             if cid not in live_ids:
                 del self.written[cid]                        # removed: if it comes back it is a new sighting
-        self.overlay = self.board.overlay()
         with self.lock:
             self.state["containers"] = rows
             self.state["in_view"] = sum(r["in_view"] for r in rows)
@@ -347,6 +351,20 @@ class LiveSession:
             self.state["stats"]["ocr_passes"] += 1
             self.state["stats"]["tags_read"] += n_reads
             self.state["message"] = f"{len(rows)} tag(s) on the map · {n_reads} read in the last pass"
+
+    def _with_board_xy(self, rows):
+        """Add each tag's position in board (picture) pixels to its row: the dashboard measures the pointer height from them."""
+        pos = {}
+        for o in self.overlay:
+            try:
+                pos[str(o[0])] = (float(o[1][0]), float(o[1][1]), float(o[2]), float(o[3]))
+            except Exception:
+                pass
+        out = []
+        for r in rows:
+            p = pos.get(str(r["container_id"]))
+            out.append(dict(r, bx=p[0], by=p[1], bw=p[2], bh=p[3]) if p else dict(r))
+        return out
 
     def crop_jpeg(self, tid):
         """JPEG of the area around one tag in the newest frame (None when it is not in the picture)."""
@@ -431,6 +449,18 @@ class LiveSession:
             pos = self.board.layout_point(c[:2] / c[2])
             if pos is not None:
                 self._set(position=pos)
+            # the pointer: the middle of the picture, in board pixels (+ the transform, so the dashboard can also read any clicked spot)
+            self._set(aim={"bx": float(c[0] / c[2]), "by": float(c[1] / c[2]), "H": [float(v) for v in Hn.ravel()],
+                           "w": int(vis.shape[1]), "h": int(vis.shape[0]), "t": time.time()})
+            cx, cy = vis.shape[1] // 2, vis.shape[0] // 2
+            for col, wd in (((0, 0, 0), 4), ((232, 190, 43), 2)):       # dark outline, then the cyan cross-hair
+                cv2.line(vis, (cx - 16, cy), (cx + 16, cy), col, wd, cv2.LINE_AA)
+                cv2.line(vis, (cx, cy - 16), (cx, cy + 16), col, wd, cv2.LINE_AA)
+                cv2.circle(vis, (cx, cy), 9, col, wd, cv2.LINE_AA)
+        else:
+            a = self.state.get("aim")
+            if a and time.time() - a["t"] > 2.0:                          # tracking lost for a while: forget the pointer
+                self._set(aim=None)
         self.clean, self.boxes = clean, boxes
         with self.lock:
             n = len(self.state["containers"]); msg = "tracking" if self.H_step is not None else "searching…"

@@ -21,3 +21,16 @@ uploads/
 live_session_*backup*.py
 live_session_broken*.py
 live_session_bad.py
+.venv/
+__pycache__/
+.pytest_cache/
+uploads/
+container-yard-backup/
+*.db
+*.mov
+*.MOV
+*.mp4
+dashboard_before_*.html
+live_session_*backup*.py
+live_session_broken*.py
+.env

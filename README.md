@@ -35,3 +35,13 @@ a tag that is wiped off the board disappears. Every change is saved as a sightin
 so no tag is skipped (the picture holds for a moment). `STACK_COLUMNS=1` shows each board column as one stack (z) instead of one box per slot.
 Other env: `OCR_WIDTH=1280` (bigger reads smaller text, slower), `LIVE_STEP_S=0.35`, `CAMERA_FIXED=1` (camera does not move),
 `LIVE_HWACCEL=0` (no hardware video decoding). `simulate_room.py` is no longer needed.
+## Pointer height (v1.6)
+The cross-hair in the live video (middle of the picture) is the pointer. The dashboard shows how high above the ground that spot is:
+**Pointer height** panel, amber marker + label in the 3D yard, and a tag on the video. Hover the video to read any other spot, click to pin it
+(the pin sticks to the board while the camera moves). `⬇ Pointer log CSV` saves every reading.
+How: every tag has a position on the board picture and a level; per column the tags are fitted `by = a + b*level`, so one level is `b` pixels
+tall and 0 m is half a level below the centre of level 1. A column with one tag borrows the level height of the other columns; with no stack
+at all the height is the middle of the level (badge shows "level only").
+The blue cone now starts at the camera, points at the pointed spot and its base covers the part of the board in the picture
+(Settings -> Camera field of view only changes how far back the camera stands). Camera height = pointer height.
+Backend: `live_session.py` adds `aim` (pointer in board pixels + picture->board transform) and `bx/by` to every container row of `/live/state`.
